@@ -2,137 +2,171 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#2E7D32">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1B4D3E">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>VeggieLife - Receitas Veganas</title>
+  <meta name="description" content="Elograin - SuperApp para comunidade vegana. Receitas, mapa, relacionamentos e consumo consciente.">
+  <title>Elograin</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Splash Screen -->
-  <div id="splash" class="splash-screen">
-    <div class="splash-content">
-      <div class="splash-icon">🌿</div>
-      <h1>VeggieLife</h1>
-      <p>Receitas Veganas & Comunidade</p>
-      <div class="splash-loader"></div>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <span>Elograin</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
+      <button class="icon-btn" id="notifBtn" aria-label="Notificações">🔔</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="mainContent">
+    <!-- FEED -->
+    <section class="view active" id="feedView">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="feedSearch" placeholder="Buscar na comunidade...">
+      </div>
+      <div class="tag-list" id="feedTags">
+        <button class="tag active" data-tag="todos">Todos</button>
+        <button class="tag" data-tag="dica">💡 Dicas</button>
+        <button class="tag" data-tag="experiencia">✨ Experiências</button>
+        <button class="tag" data-tag="duvida">❓ Dúvidas</button>
+      </div>
+      <div id="feedPosts"></div>
+    </section>
+
+    <!-- RECIPES -->
+    <section class="view" id="recipesView">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="recipeSearch" placeholder="Buscar receitas veganas...">
+      </div>
+      <div class="tabs" id="recipeTabs">
+        <button class="tab active" data-tab="todas">Todas</button>
+        <button class="tab" data-tab="economica">💰 Econômicas</button>
+        <button class="tab" data-tab="rapida">⚡ Rápidas</button>
+        <button class="tab" data-tab="sobremesa">🍰 Sobremesas</button>
+      </div>
+      <div id="recipesList"></div>
+    </section>
+
+    <!-- EXPLORE (Map + Events + Reviews) -->
+    <section class="view" id="exploreView">
+      <div class="tabs" id="exploreTabs">
+        <button class="tab active" data-tab="mapa">🗺️ Mapa</button>
+        <button class="tab" data-tab="eventos">🎉 Eventos</button>
+        <button class="tab" data-tab="avaliacoes">⭐ Avaliações</button>
+      </div>
+      <div id="exploreContent"></div>
+    </section>
+
+    <!-- CONSUME (Supermarkets + Beauty) -->
+    <section class="view" id="consumeView">
+      <div class="tabs" id="consumeTabs">
+        <button class="tab active" data-tab="mercado">🛒 Mercado</button>
+        <button class="tab" data-tab="beleza">💄 Beleza</button>
+      </div>
+      <div id="consumeContent"></div>
+    </section>
+
+    <!-- CONNECT (Relationships) -->
+    <section class="view" id="connectView">
+      <div class="tabs" id="connectTabs">
+        <button class="tab active" data-tab="encontros">💕 Encontros</button>
+        <button class="tab" data-tab="amizades">🤝 Amizades</button>
+      </div>
+      <div id="connectContent"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="view" id="profileView">
+      <div class="card profile-card">
+        <div class="avatar avatar-lg" id="profileAvatar">🦁</div>
+        <h2 id="profileName">Você</h2>
+        <p style="color: var(--text-light); font-size: 0.9rem;" id="profileBio">Membro da comunidade Elograin</p>
+        <div class="profile-stats">
+          <div class="profile-stat"><div class="num" id="statPosts">0</div><div class="lbl">Posts</div></div>
+          <div class="profile-stat"><div class="num" id="statRecipes">0</div><div class="lbl">Receitas</div></div>
+          <div class="profile-stat"><div class="num" id="statLikes">0</div><div class="lbl">Curtidas</div></div>
+        </div>
+      </div>
+      <h3 class="section-title mb-1">Minhas Receitas</h3>
+      <div id="myRecipes"></div>
+      <h3 class="section-title mb-1 mt-2">Minhas Avaliações</h3>
+      <div id="myReviews"></div>
+    </section>
+  </main>
+
+  <!-- FAB -->
+  <button class="fab pulse" id="fabBtn" aria-label="Criar">✚</button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="nav-item active" data-view="feed">
+        <span class="nav-icon">🏠</span>
+        <span>Início</span>
+      </button>
+      <button class="nav-item" data-view="recipes">
+        <span class="nav-icon">🍽️</span>
+        <span>Receitas</span>
+      </button>
+      <button class="nav-item" data-view="explore">
+        <span class="nav-icon">🗺️</span>
+        <span>Explorar</span>
+      </button>
+      <button class="nav-item" data-view="consume">
+        <span class="nav-icon">🛒</span>
+        <span>Consumo</span>
+      </button>
+      <button class="nav-item" data-view="connect">
+        <span class="nav-icon">💕</span>
+        <span>Conexões</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Create Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Criar Novo</h3>
+        <button class="icon-btn" id="closeCreateModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs" id="createTabs">
+          <button class="tab active" data-create="post">📝 Post</button>
+          <button class="tab" data-create="recipe">🍽️ Receita</button>
+          <button class="tab" data-create="review">⭐ Avaliação</button>
+        </div>
+        <div id="createForm"></div>
+      </div>
     </div>
   </div>
 
-  <!-- App Container -->
-  <div id="app" class="app-container hidden">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="header-content">
-        <span class="header-logo">🌿 VeggieLife</span>
-        <button class="header-btn" id="btn-search" aria-label="Buscar">🔍</button>
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="detailTitle">Detalhes</h3>
+        <button class="icon-btn" id="closeDetailModal">✕</button>
       </div>
-    </header>
-
-    <!-- Search Overlay -->
-    <div id="search-overlay" class="search-overlay hidden">
-      <div class="search-bar">
-        <button class="search-back" id="search-back">←</button>
-        <input type="text" id="search-input" placeholder="Buscar receitas ou posts...">
-        <button class="search-clear" id="search-clear">✕</button>
-      </div>
-      <div id="search-results" class="search-results"></div>
+      <div class="modal-body" id="detailBody"></div>
+      <div class="modal-footer" id="detailFooter"></div>
     </div>
-
-    <!-- Main Content -->
-    <main class="main-content" id="main-content">
-      <!-- ABA RECEITAS -->
-      <section id="tab-recipes" class="tab-content active">
-        <div class="hero-section">
-          <h2>🍽️ Receitas Caseiras</h2>
-          <p>Delícias veganas feitas com amor</p>
-        </div>
-
-        <div class="filters-bar">
-          <button class="filter-chip active" data-filter="all">Todas</button>
-          <button class="filter-chip" data-filter="café">☕ Café</button>
-          <button class="filter-chip" data-filter="almoço">🍛 Almoço</button>
-          <button class="filter-chip" data-filter="jantar">🍝 Jantar</button>
-          <button class="filter-chip" data-filter="sobremesa">🍰 Doce</button>
-          <button class="filter-chip" data-filter="lanche">🥪 Lanche</button>
-        </div>
-
-        <div class="recipes-grid" id="recipes-grid"></div>
-      </section>
-
-      <!-- ABA COMUNIDADE -->
-      <section id="tab-community" class="tab-content">
-        <div class="hero-section community-hero">
-          <h2>👥 Comunidade</h2>
-          <p>Compartilhe experiências e descobertas</p>
-        </div>
-
-        <div class="posts-feed" id="posts-feed"></div>
-      </section>
-    </main>
-
-    <!-- Recipe Detail Modal -->
-    <div id="recipe-modal" class="modal hidden">
-      <div class="modal-content">
-        <button class="modal-close" id="modal-close">✕</button>
-        <div id="recipe-detail"></div>
-      </div>
-    </div>
-
-    <!-- New Post Modal -->
-    <div id="post-modal" class="modal hidden">
-      <div class="modal-content post-modal-content">
-        <div class="modal-header">
-          <h3>✨ Nova Postagem</h3>
-          <button class="modal-close" id="post-modal-close">✕</button>
-        </div>
-        <form id="post-form">
-          <div class="form-group">
-            <label for="post-author">Seu nome</label>
-            <input type="text" id="post-author" placeholder="Como quer ser chamado?" required>
-          </div>
-          <div class="form-group">
-            <label for="post-content">O que você quer compartilhar?</label>
-            <textarea id="post-content" rows="4" placeholder="Conte sua experiência, dica ou receita favorita..." required></textarea>
-          </div>
-          <div class="form-group">
-            <label>Emoji do post</label>
-            <div class="emoji-picker">
-              <button type="button" class="emoji-option selected" data-emoji="🌿">🌿</button>
-              <button type="button" class="emoji-option" data-emoji="🍕">🍕</button>
-              <button type="button" class="emoji-option" data-emoji="🥗">🥗</button>
-              <button type="button" class="emoji-option" data-emoji="🍰">🍰</button>
-              <button type="button" class="emoji-option" data-emoji="🥤">🥤</button>
-              <button type="button" class="emoji-option" data-emoji="🌮">🌮</button>
-            </div>
-          </div>
-          <button type="submit" class="btn-submit">📤 Publicar</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="toast hidden"></div>
-
-    <!-- Floating Action Button (FAB) - Thumb Friendly na parte inferior -->
-    <button id="fab" class="fab" aria-label="Nova postagem">
-      <span>＋</span>
-    </button>
-
-    <!-- Bottom Navigation - Thumb Friendly -->
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-tab="recipes">
-        <span class="nav-icon">🍽️</span>
-        <span class="nav-label">Receitas</span>
-      </button>
-      <button class="nav-item" data-tab="community">
-        <span class="nav-icon">👥</span>
-        <span class="nav-label">Comunidade</span>
-      </button>
-    </nav>
   </div>
 
   <script src="app.js"></script>
