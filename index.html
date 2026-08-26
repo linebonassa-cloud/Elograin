@@ -13,6 +13,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -45,7 +47,61 @@
         <button class="tag" data-tag="experiencia">✨ Experiências</button>
         <button class="tag" data-tag="duvida">❓ Dúvidas</button>
       </div>
-      <div id="feedPosts"></div>
+      <!-- Skeleton Feed -->
+      <div id="feedSkeleton">
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+      </div>
+      <div id="feedPosts" class="hidden"></div>
     </section>
 
     <!-- RECIPES -->
@@ -60,7 +116,34 @@
         <button class="tab" data-tab="rapida">⚡ Rápidas</button>
         <button class="tab" data-tab="sobremesa">🍰 Sobremesas</button>
       </div>
-      <div id="recipesList"></div>
+      <!-- Skeleton Recipes -->
+      <div id="recipesSkeleton">
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+      </div>
+      <div id="recipesList" class="hidden"></div>
     </section>
 
     <!-- EXPLORE (Map + Events + Reviews) -->
@@ -70,7 +153,29 @@
         <button class="tab" data-tab="eventos">🎉 Eventos</button>
         <button class="tab" data-tab="avaliacoes">⭐ Avaliações</button>
       </div>
-      <div id="exploreContent"></div>
+      <div id="exploreContent">
+        <!-- Skeleton Explore -->
+        <div id="exploreSkeleton">
+          <div class="skeleton" style="width:100%;height:320px;border-radius:16px;margin-bottom:16px"></div>
+          <div class="skeleton-place">
+            <div class="skeleton skeleton-place-img"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-title"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            </div>
+          </div>
+          <div class="skeleton-place">
+            <div class="skeleton skeleton-place-img"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-title"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            </div>
+          </div>
+        </div>
+        <div id="exploreRealContent" class="hidden"></div>
+      </div>
     </section>
 
     <!-- CONSUME (Supermarkets + Beauty) -->
@@ -169,6 +274,8 @@
     </div>
   </div>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="app.js"></script>
 </body>
 </html>

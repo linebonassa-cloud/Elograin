@@ -1,92 +1,70 @@
-# 🌿 Elograin - SuperApp Vegano
+# 🌿 Elograin v2 - SuperApp Vegano
 
-Aplicativo PWA (Progressive Web App) para comunidade vegana, centralizando receitas, mapa de estabelecimentos, guia de consumo, eventos e relacionamentos.
+Aplicativo PWA (Progressive Web App) para comunidade vegana com skeleton screens, integracao Google Maps e OpenStreetMap.
 
-## ✨ Funcionalidades
+## ✨ Novidades da v2
 
-- **🏠 Feed da Comunidade** - Posts, dicas, experiências e dúvidas
-- **🍽️ Receitas Veganas** - Criação, avaliação e compartilhamento de receitas
-- **🗺️ Mapa Interativo** - Restaurantes, lanchonetes, padarias e sorveterias veganas
-- **🎉 Eventos** - Festivais, feiras, workshops e encontros
-- **⭐ Avaliações** - Reviews detalhados de estabelecimentos
-- **🛒 Guia de Consumo** - Produtos de supermercado e perfumaria veganos/cruelty-free
-- **💕 Conexões** - Módulo de encontros e amizades
-- **👤 Perfil** - Gerenciamento de receitas e avaliações
+- **🦴 Skeleton Screens** - Retangulos cinzas pulsantes simulam carregamento de cards antes dos dados reais aparecerem (feed, receitas, mapa)
+- **🗺️ OpenStreetMap + Leaflet** - Mapa interativo real com pins de restaurantes veganos usando coordenadas lat/long
+- **🔑 Google Places API (New)** - Busca restaurantes veganos reais do Google Maps (requer API key)
 
 ## 🚀 Deploy no Vercel
 
-### Opção 1: Deploy via CLI
+### Opcao 1: Drag & Drop
+1. Baixe o `.zip` e extraia a pasta `elograin-pwa-v2`
+2. Acesse [vercel.com](https://vercel.com) → Login
+3. "Add New..." → "Project" → Arraste a pasta
 
+### Opcao 2: CLI
 ```bash
-# Instale o Vercel CLI
-npm i -g vercel
-
-# Navegue até a pasta do projeto
-cd elograin-pwa
-
-# Deploy
-vercel
+cd elograin-pwa-v2
+npx vercel
 ```
 
-### Opção 2: Deploy via Git
+## 🔑 Configurar Google Places API (Opcional)
 
-1. Crie um repositório no GitHub
-2. Envie os arquivos:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/seu-usuario/elograin.git
-git push -u origin main
-```
-3. Importe o repositório no [Vercel](https://vercel.com)
-4. O deploy será automático!
+Para buscar restaurantes veganos REAIS do Google Maps:
 
-### Opção 3: Deploy Manual (Drag & Drop)
+1. Acesse [console.cloud.google.com](https://console.cloud.google.com)
+2. Crie um novo projeto
+3. Ative a API: **Places API (New)**
+4. Va em "Credenciais" → "Criar credenciais" → "Chave de API"
+5. No app, va em **Explorar → Mapa** e toque em **"🔑 Configurar API"**
+6. Cole sua chave e recarregue o app
 
-1. Acesse [vercel.com](https://vercel.com)
-2. Clique em "Add New..." → "Project"
-3. Selecione "Import Git Repository" ou faça upload dos arquivos
+> Sem API key, o app funciona normalmente com dados mockados!
 
-## 📱 Instalação no Celular
+## 📱 Instalar no Celular
 
-Após o deploy:
-1. Acesse o URL do app no navegador do celular
-2. Toque em "Adicionar à Tela Inicial" (Chrome/Safari)
-3. O app será instalado como um app nativo!
+Apos o deploy, acesse o URL no Chrome/Safari do celular → "Adicionar a Tela Inicial" → Funciona como app nativo offline!
 
 ## 🎨 Design
 
-- **Thumb-Friendly**: Navegação inferior e FAB posicionados para uso com uma mão
-- **Paleta**: Verde Botânico (#1B4D3E), Terra Cota (#E07A5F), Creme (#F4F1DE)
-- **Fontes**: Outfit (títulos) + Inter (corpo)
-- **Dark Mode**: Suporte completo a tema escuro
-
-## 🛠️ Tecnologias
-
-- HTML5, CSS3, JavaScript Vanilla
-- Service Worker para funcionamento offline
-- LocalStorage para persistência de dados
-- Manifest.json para instalação PWA
+- **Thumb-Friendly**: Navegacao inferior + FAB na parte inferior
+- **Skeleton Loading**: Shimmer animation em cards de feed, receitas e mapa
+- **Paleta**: Verde Botanico `#1B4D3E`, Terra Cota `#E07A5F`, Creme `#F4F1DE`
+- **Dark Mode**: Toggle no header
+- **Mapa OSM**: Leaflet.js com tiles OpenStreetMap
 
 ## 📂 Estrutura
 
 ```
-elograin-pwa/
-├── index.html      # Estrutura SPA
-├── style.css       # Estilos e temas
-├── app.js          # Lógica e dados
-├── sw.js           # Service Worker
-├── manifest.json   # Configuração PWA
-└── icons/          # Ícones do app
+elograin-pwa-v2/
+├── index.html       # SPA com skeletons e Leaflet
+├── style.css        # Estilos + animacoes skeleton
+├── app.js           # Logica + Google Maps API + OSM
+├── sw.js            # Service Worker
+├── manifest.json    # Configuracao PWA
+└── icons/           # Icones do app
 ```
 
-## 📝 Notas
+## 🛠 Tecnologias
 
-- Os dados são mockados para demonstração
-- LocalStorage persiste receitas, posts e preferências do usuário
-- O app é totalmente responsivo e otimizado para mobile
+- HTML5, CSS3, JavaScript Vanilla
+- Leaflet.js + OpenStreetMap
+- Google Places API (New) REST
+- Service Worker (offline)
+- LocalStorage (persistencia)
 
 ---
 
