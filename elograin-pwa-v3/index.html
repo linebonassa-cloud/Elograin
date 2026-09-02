@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1B4D3E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Elograin - SuperApp para comunidade vegana">
+  <title>Elograin</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Swipe to Delete Confirmation Overlay -->
+  <div class="swipe-overlay" id="swipeOverlay">
+    <div class="swipe-modal">
+      <div class="warning-icon">🗑️</div>
+      <h3>Excluir post?</h3>
+      <p id="swipePostTitle">Esta acao nao pode ser desfeita.</p>
+
+      <div class="swipe-track" id="swipeTrack">
+        <div class="swipe-progress" id="swipeProgress"></div>
+        <div class="swipe-track-inner">
+          <span class="swipe-label" id="swipeLabel">Arraste para excluir →</span>
+          <span class="swipe-success" id="swipeSuccess">
+            ✅ Excluindo...
+          </span>
+        </div>
+        <div class="swipe-handle" id="swipeHandle">
+          🗑️
+        </div>
+      </div>
+
+      <button class="swipe-cancel" id="swipeCancel" onclick="closeSwipeModal()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <span>Elograin</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
+      <button class="icon-btn" id="notifBtn" aria-label="Notificacoes">🔔</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="mainContent">
+    <!-- FEED -->
+    <section class="view active" id="feedView">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="feedSearch" placeholder="Buscar na comunidade...">
+      </div>
+      <div class="tag-list" id="feedTags">
+        <button class="tag active" data-tag="todos">Todos</button>
+        <button class="tag" data-tag="dica">💡 Dicas</button>
+        <button class="tag" data-tag="experiencia">✨ Experiencias</button>
+        <button class="tag" data-tag="duvida">❓ Duvidas</button>
+      </div>
+      <!-- Skeleton Feed -->
+      <div id="feedSkeleton">
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+      </div>
+      <div id="feedPosts" class="hidden"></div>
+    </section>
+
+    <!-- RECIPES -->
+    <section class="view" id="recipesView">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="recipeSearch" placeholder="Buscar receitas veganas...">
+      </div>
+      <div class="tabs" id="recipeTabs">
+        <button class="tab active" data-tab="todas">Todas</button>
+        <button class="tab" data-tab="economica">💰 Economicas</button>
+        <button class="tab" data-tab="rapida">⚡ Rapidas</button>
+        <button class="tab" data-tab="sobremesa">🍰 Sobremesas</button>
+      </div>
+      <div id="recipesSkeleton">
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+      </div>
+      <div id="recipesList" class="hidden"></div>
+    </section>
+
+    <!-- EXPLORE -->
+    <section class="view" id="exploreView">
+      <div class="tabs" id="exploreTabs">
+        <button class="tab active" data-tab="mapa">🗺️ Mapa</button>
+        <button class="tab" data-tab="eventos">🎉 Eventos</button>
+        <button class="tab" data-tab="avaliacoes">⭐ Avaliacoes</button>
+      </div>
+      <div id="exploreContent">
+        <div id="exploreSkeleton">
+          <div class="skeleton" style="width:100%;height:320px;border-radius:16px;margin-bottom:16px"></div>
+          <div class="skeleton-place">
+            <div class="skeleton skeleton-place-img"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-title"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            </div>
+          </div>
+          <div class="skeleton-place">
+            <div class="skeleton skeleton-place-img"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-title"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            </div>
+          </div>
+        </div>
+        <div id="exploreRealContent" class="hidden"></div>
+      </div>
+    </section>
+
+    <!-- CONSUME -->
+    <section class="view" id="consumeView">
+      <div class="tabs" id="consumeTabs">
+        <button class="tab active" data-tab="mercado">🛒 Mercado</button>
+        <button class="tab" data-tab="beleza">💄 Beleza</button>
+      </div>
+      <div id="consumeContent"></div>
+    </section>
+
+    <!-- CONNECT -->
+    <section class="view" id="connectView">
+      <div class="tabs" id="connectTabs">
+        <button class="tab active" data-tab="encontros">💕 Encontros</button>
+        <button class="tab" data-tab="amizades">🤝 Amizades</button>
+      </div>
+      <div id="connectContent"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="view" id="profileView">
+      <div class="card profile-card">
+        <div class="avatar avatar-lg" id="profileAvatar">🦁</div>
+        <h2 id="profileName">Voce</h2>
+        <p style="color: var(--text-light); font-size: 0.9rem;" id="profileBio">Membro da comunidade Elograin</p>
+        <div class="profile-stats">
+          <div class="profile-stat"><div class="num" id="statPosts">0</div><div class="lbl">Posts</div></div>
+          <div class="profile-stat"><div class="num" id="statRecipes">0</div><div class="lbl">Receitas</div></div>
+          <div class="profile-stat"><div class="num" id="statLikes">0</div><div class="lbl">Curtidas</div></div>
+        </div>
+      </div>
+      <h3 class="section-title mb-1">Minhas Receitas</h3>
+      <div id="myRecipes"></div>
+      <h3 class="section-title mb-1 mt-2">Minhas Avaliacoes</h3>
+      <div id="myReviews"></div>
+    </section>
+  </main>
+
+  <!-- FAB -->
+  <button class="fab pulse" id="fabBtn" aria-label="Criar">✚</button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="nav-item active" data-view="feed">
+        <span class="nav-icon">🏠</span>
+        <span>Inicio</span>
+      </button>
+      <button class="nav-item" data-view="recipes">
+        <span class="nav-icon">🍽️</span>
+        <span>Receitas</span>
+      </button>
+      <button class="nav-item" data-view="explore">
+        <span class="nav-icon">🗺️</span>
+        <span>Explorar</span>
+      </button>
+      <button class="nav-item" data-view="consume">
+        <span class="nav-icon">🛒</span>
+        <span>Consumo</span>
+      </button>
+      <button class="nav-item" data-view="connect">
+        <span class="nav-icon">💕</span>
+        <span>Conexoes</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Create Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Criar Novo</h3>
+        <button class="icon-btn" id="closeCreateModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs" id="createTabs">
+          <button class="tab active" data-create="post">📝 Post</button>
+          <button class="tab" data-create="recipe">🍽️ Receita</button>
+          <button class="tab" data-create="review">⭐ Avaliacao</button>
+        </div>
+        <div id="createForm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="detailTitle">Detalhes</h3>
+        <button class="icon-btn" id="closeDetailModal">✕</button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+      <div class="modal-footer" id="detailFooter"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>
