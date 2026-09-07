@@ -3,279 +3,753 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#1B4D3E">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="Elograin - SuperApp para comunidade vegana. Receitas, mapa, relacionamentos e consumo consciente.">
-  <title>Elograin</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  <link rel="stylesheet" href="style.css">
+  <title>Elograin - Avaliacao & Curtida</title>
+  <!-- Motion One (Framer Motion Web) -->
+  <script src="https://unpkg.com/motion@10.16.2/dist/motion.umd.min.js"></script>
+  <!-- Lottie Web -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <style>
+    /* ============================================
+       RESET & BASE
+       ============================================ */
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --primary: #1B4D3E;
+      --primary-light: #81B29A;
+      --secondary: #E07A5F;
+      --danger: #e74c3c;
+      --heart: #ff4757;
+      --heart-dark: #c0392b;
+      --star-empty: #d1d8e0;
+      --star-filled: #f1c40f;
+      --star-glow: rgba(241, 196, 15, 0.35);
+      --bg: #FAFAFA;
+      --surface: #FFFFFF;
+      --text: #2D3142;
+      --text-light: #7f8c8d;
+      --border: rgba(45, 49, 66, 0.08);
+      --shadow: 0 4px 24px rgba(27, 77, 62, 0.1);
+      --shadow-lg: 0 12px 48px rgba(27, 77, 62, 0.15);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+      background: linear-gradient(135deg, #e8f5e9 0%, #f4f1de 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    /* ============================================
+       SMARTPHONE FRAME
+       ============================================ */
+    .phone-frame {
+      width: 100%;
+      max-width: 390px;
+      background: var(--surface);
+      border-radius: 32px;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      position: relative;
+      border: 8px solid var(--text);
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 28px;
+      background: var(--text);
+      border-radius: 0 0 16px 16px;
+      z-index: 10;
+    }
+
+    .phone-content {
+      padding: 48px 20px 32px;
+      min-height: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ============================================
+       RECIPE CARD PREVIEW
+       ============================================ */
+    .recipe-preview {
+      background: var(--bg);
+      border-radius: 20px;
+      padding: 16px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .recipe-preview .emoji {
+      font-size: 4rem;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .recipe-preview h2 {
+      font-size: 1.1rem;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .recipe-preview .author {
+      font-size: 0.8rem;
+      color: var(--text-light);
+    }
+
+    /* ============================================
+       SECTION: STAR RATING
+       ============================================ */
+    .rating-section {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 24px 16px;
+      border: 2px solid var(--border);
+      text-align: center;
+    }
+
+    .rating-section h3 {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+      font-weight: 700;
+    }
+
+    /* Container das 5 estrelas */
+    .stars-container {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    /* Cada estrela individual */
+    .star-item {
+      width: 44px;
+      height: 44px;
+      cursor: pointer;
+      position: relative;
+      transform-origin: center center;
+    }
+
+    .star-item svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Estrela vazia (fundo) */
+    .star-bg {
+      fill: var(--star-empty);
+      transition: fill 0.3s ease;
+    }
+
+    /* Estrela preenchida (overlay) */
+    .star-fill {
+      fill: var(--star-filled);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    /* Estado ativo: estrela preenchida visivel */
+    .star-item.active .star-fill { opacity: 1; }
+    .star-item.active .star-bg { fill: var(--star-filled); }
+
+    /* Glow effect nas estrelas ativas */
+    .star-item.active {
+      filter: drop-shadow(0 0 8px var(--star-glow));
+    }
+
+    /* ============================================
+       LOTTIE SUCCESS CONTAINER
+       ============================================ */
+    .lottie-container {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto;
+      display: none;
+      position: relative;
+    }
+
+    .lottie-container.active {
+      display: block;
+    }
+
+    /* ============================================
+       FEEDBACK TEXT (aparece apos avaliar)
+       ============================================ */
+    .rating-feedback {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-top: 8px;
+      opacity: 0;
+      transform: translateY(10px);
+      height: 0;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .rating-feedback.show {
+      opacity: 1;
+      transform: translateY(0);
+      height: auto;
+    }
+
+    .rating-feedback .score {
+      font-size: 2rem;
+      color: var(--star-filled);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* ============================================
+       SECTION: LIKE BUTTON (HEART)
+       ============================================ */
+    .like-section {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 24px 16px;
+      border: 2px solid var(--border);
+      text-align: center;
+    }
+
+    .like-section h3 {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+
+    /* Container do botao de curtir */
+    .heart-button {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      margin: 0 auto;
+      position: relative;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .heart-button:active {
+      transform: scale(0.95);
+    }
+
+    .heart-button.liked {
+      background: rgba(255, 71, 87, 0.08);
+      border-color: var(--heart);
+      box-shadow: 0 0 24px rgba(255, 71, 87, 0.2);
+    }
+
+    /* SVG do coracao */
+    .heart-svg {
+      width: 40px;
+      height: 40px;
+      overflow: visible;
+    }
+
+    /* Path do contorno (stroke) */
+    .heart-stroke {
+      fill: none;
+      stroke: var(--heart);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      transition: stroke-dashoffset 0.6s ease-out;
+    }
+
+    /* Quando ativo, desenha o contorno da esquerda para direita */
+    .heart-button.liked .heart-stroke {
+      stroke-dashoffset: 0;
+    }
+
+    /* Path do preenchimento */
+    .heart-fill {
+      fill: var(--heart);
+      opacity: 0;
+      transform-origin: center;
+      transform: scale(0);
+      transition: opacity 0.3s ease 0.5s, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s;
+    }
+
+    /* Quando ativo, preenche apos o stroke completar */
+    .heart-button.liked .heart-fill {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Particulas de coracao (efeito de explosao) */
+    .heart-particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--heart);
+      border-radius: 50%;
+      opacity: 0;
+      top: 50%;
+      left: 50%;
+    }
+
+    /* ============================================
+       LIKE COUNTER
+       ============================================ */
+    .like-counter {
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: var(--text-light);
+      font-weight: 600;
+    }
+
+    .like-counter .count {
+      color: var(--heart);
+      font-weight: 800;
+      font-size: 1.2rem;
+    }
+
+    /* ============================================
+       INSTRUCTIONS
+       ============================================ */
+    .instructions {
+      background: var(--bg);
+      border-radius: 16px;
+      padding: 16px;
+      font-size: 0.8rem;
+      color: var(--text-light);
+      line-height: 1.6;
+      border: 1px dashed var(--border);
+    }
+
+    .instructions strong {
+      color: var(--primary);
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 420px) {
+      body { padding: 0; background: var(--surface); }
+      .phone-frame { max-width: 100%; border: none; border-radius: 0; box-shadow: none; }
+      .phone-notch { display: none; }
+      .phone-content { padding: 20px 16px; min-height: 100vh; }
+    }
+  </style>
 </head>
 <body>
-  <!-- Toast Container -->
-  <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Header -->
-  <header class="app-header">
-    <div class="logo">
-      <div class="logo-icon">🌿</div>
-      <span>Elograin</span>
-    </div>
-    <div class="header-actions">
-      <button class="icon-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
-      <button class="icon-btn" id="notifBtn" aria-label="Notificações">🔔</button>
-    </div>
-  </header>
+  <!-- ============================================
+       SMARTPHONE FRAME
+       ============================================ -->
+  <div class="phone-frame">
+    <div class="phone-notch"></div>
 
-  <!-- Main Content -->
-  <main id="mainContent">
-    <!-- FEED -->
-    <section class="view active" id="feedView">
-      <div class="search-bar">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="feedSearch" placeholder="Buscar na comunidade...">
+    <div class="phone-content">
+
+      <!-- Recipe Preview -->
+      <div class="recipe-preview">
+        <span class="emoji">🍛</span>
+        <h2>Strogonoff de Grao-de-Bico</h2>
+        <p class="author">por Ana Verde</p>
       </div>
-      <div class="tag-list" id="feedTags">
-        <button class="tag active" data-tag="todos">Todos</button>
-        <button class="tag" data-tag="dica">💡 Dicas</button>
-        <button class="tag" data-tag="experiencia">✨ Experiências</button>
-        <button class="tag" data-tag="duvida">❓ Dúvidas</button>
-      </div>
-      <!-- Skeleton Feed -->
-      <div id="feedSkeleton">
-        <div class="skeleton-card">
-          <div class="skeleton-header">
-            <div class="skeleton skeleton-avatar"></div>
-            <div style="flex:1">
-              <div class="skeleton skeleton-line skeleton-line-sm"></div>
-              <div class="skeleton skeleton-line skeleton-line-md"></div>
-            </div>
-          </div>
-          <div class="skeleton skeleton-img"></div>
-          <div class="skeleton skeleton-line skeleton-line-lg"></div>
-          <div class="skeleton skeleton-line skeleton-line-md"></div>
-          <div class="skeleton-actions">
-            <div class="skeleton skeleton-action"></div>
-            <div class="skeleton skeleton-action"></div>
-            <div class="skeleton skeleton-action"></div>
-          </div>
+
+      <!-- ============================================
+           STAR RATING SECTION
+           ============================================ -->
+      <div class="rating-section">
+        <h3>Avalie esta receita</h3>
+
+        <!-- 5 Stars Container -->
+        <div class="stars-container" id="starsContainer">
+          <!-- Estrelas geradas via JS -->
         </div>
-        <div class="skeleton-card">
-          <div class="skeleton-header">
-            <div class="skeleton skeleton-avatar"></div>
-            <div style="flex:1">
-              <div class="skeleton skeleton-line skeleton-line-sm"></div>
-              <div class="skeleton skeleton-line skeleton-line-md"></div>
-            </div>
-          </div>
-          <div class="skeleton skeleton-img"></div>
-          <div class="skeleton skeleton-line skeleton-line-lg"></div>
-          <div class="skeleton skeleton-line skeleton-line-md"></div>
-          <div class="skeleton-actions">
-            <div class="skeleton skeleton-action"></div>
-            <div class="skeleton skeleton-action"></div>
-            <div class="skeleton skeleton-action"></div>
-          </div>
-        </div>
-        <div class="skeleton-card">
-          <div class="skeleton-header">
-            <div class="skeleton skeleton-avatar"></div>
-            <div style="flex:1">
-              <div class="skeleton skeleton-line skeleton-line-sm"></div>
-              <div class="skeleton skeleton-line skeleton-line-md"></div>
-            </div>
-          </div>
-          <div class="skeleton skeleton-img"></div>
-          <div class="skeleton skeleton-line skeleton-line-lg"></div>
-          <div class="skeleton skeleton-line skeleton-line-md"></div>
-          <div class="skeleton-actions">
-            <div class="skeleton skeleton-action"></div>
-            <div class="skeleton skeleton-action"></div>
-            <div class="skeleton skeleton-action"></div>
-          </div>
+
+        <!-- Lottie Success Animation -->
+        <div class="lottie-container" id="lottieContainer"></div>
+
+        <!-- Feedback Text -->
+        <div class="rating-feedback" id="ratingFeedback">
+          <span class="score" id="scoreDisplay">0.0</span>
+          <span id="feedbackText">Toque nas estrelas para avaliar</span>
         </div>
       </div>
-      <div id="feedPosts" class="hidden"></div>
-    </section>
 
-    <!-- RECIPES -->
-    <section class="view" id="recipesView">
-      <div class="search-bar">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="recipeSearch" placeholder="Buscar receitas veganas...">
-      </div>
-      <div class="tabs" id="recipeTabs">
-        <button class="tab active" data-tab="todas">Todas</button>
-        <button class="tab" data-tab="economica">💰 Econômicas</button>
-        <button class="tab" data-tab="rapida">⚡ Rápidas</button>
-        <button class="tab" data-tab="sobremesa">🍰 Sobremesas</button>
-      </div>
-      <!-- Skeleton Recipes -->
-      <div id="recipesSkeleton">
-        <div class="skeleton-recipe">
-          <div class="skeleton skeleton-thumb"></div>
-          <div style="flex:1">
-            <div class="skeleton skeleton-line skeleton-line-title"></div>
-            <div class="skeleton skeleton-line skeleton-line-md"></div>
-            <div class="skeleton skeleton-line skeleton-line-sm"></div>
-          </div>
-        </div>
-        <div class="skeleton-recipe">
-          <div class="skeleton skeleton-thumb"></div>
-          <div style="flex:1">
-            <div class="skeleton skeleton-line skeleton-line-title"></div>
-            <div class="skeleton skeleton-line skeleton-line-md"></div>
-            <div class="skeleton skeleton-line skeleton-line-sm"></div>
-          </div>
-        </div>
-        <div class="skeleton-recipe">
-          <div class="skeleton skeleton-thumb"></div>
-          <div style="flex:1">
-            <div class="skeleton skeleton-line skeleton-line-title"></div>
-            <div class="skeleton skeleton-line skeleton-line-md"></div>
-            <div class="skeleton skeleton-line skeleton-line-sm"></div>
-          </div>
+      <!-- ============================================
+           LIKE BUTTON SECTION (HEART)
+           ============================================ -->
+      <div class="like-section">
+        <h3>Curtir receita</h3>
+
+        <button class="heart-button" id="heartButton" aria-label="Curtir receita">
+          <svg class="heart-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <!-- Contorno do coracao (stroke animado) -->
+            <path class="heart-stroke" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            <!-- Preenchimento do coracao -->
+            <path class="heart-fill" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+
+          <!-- Particulas para efeito de explosao -->
+          <div class="heart-particles" id="heartParticles"></div>
+        </button>
+
+        <div class="like-counter">
+          <span class="count" id="likeCount">42</span> curtidas
         </div>
       </div>
-      <div id="recipesList" class="hidden"></div>
-    </section>
 
-    <!-- EXPLORE (Map + Events + Reviews) -->
-    <section class="view" id="exploreView">
-      <div class="tabs" id="exploreTabs">
-        <button class="tab active" data-tab="mapa">🗺️ Mapa</button>
-        <button class="tab" data-tab="eventos">🎉 Eventos</button>
-        <button class="tab" data-tab="avaliacoes">⭐ Avaliações</button>
+      <!-- Instructions -->
+      <div class="instructions">
+        <strong>💡 Como funciona:</strong><br>
+        • <strong>Estrelas:</strong> Passe o dedo/mouse sobre as estrelas para ver o efeito de escala (Motion One). Toque para confirmar e ver a animacao Lottie de sucesso.<br>
+        • <strong>Curtir:</strong> Toque no coracao. O contorno sera desenhado da esquerda para direita (SVG stroke-dashoffset), depois o coracao se preenche com pulso (Motion One).
       </div>
-      <div id="exploreContent">
-        <!-- Skeleton Explore -->
-        <div id="exploreSkeleton">
-          <div class="skeleton" style="width:100%;height:320px;border-radius:16px;margin-bottom:16px"></div>
-          <div class="skeleton-place">
-            <div class="skeleton skeleton-place-img"></div>
-            <div style="flex:1">
-              <div class="skeleton skeleton-line skeleton-line-title"></div>
-              <div class="skeleton skeleton-line skeleton-line-md"></div>
-              <div class="skeleton skeleton-line skeleton-line-sm"></div>
-            </div>
-          </div>
-          <div class="skeleton-place">
-            <div class="skeleton skeleton-place-img"></div>
-            <div style="flex:1">
-              <div class="skeleton skeleton-line skeleton-line-title"></div>
-              <div class="skeleton skeleton-line skeleton-line-md"></div>
-              <div class="skeleton skeleton-line skeleton-line-sm"></div>
-            </div>
-          </div>
-        </div>
-        <div id="exploreRealContent" class="hidden"></div>
-      </div>
-    </section>
 
-    <!-- CONSUME (Supermarkets + Beauty) -->
-    <section class="view" id="consumeView">
-      <div class="tabs" id="consumeTabs">
-        <button class="tab active" data-tab="mercado">🛒 Mercado</button>
-        <button class="tab" data-tab="beleza">💄 Beleza</button>
-      </div>
-      <div id="consumeContent"></div>
-    </section>
-
-    <!-- CONNECT (Relationships) -->
-    <section class="view" id="connectView">
-      <div class="tabs" id="connectTabs">
-        <button class="tab active" data-tab="encontros">💕 Encontros</button>
-        <button class="tab" data-tab="amizades">🤝 Amizades</button>
-      </div>
-      <div id="connectContent"></div>
-    </section>
-
-    <!-- PROFILE -->
-    <section class="view" id="profileView">
-      <div class="card profile-card">
-        <div class="avatar avatar-lg" id="profileAvatar">🦁</div>
-        <h2 id="profileName">Você</h2>
-        <p style="color: var(--text-light); font-size: 0.9rem;" id="profileBio">Membro da comunidade Elograin</p>
-        <div class="profile-stats">
-          <div class="profile-stat"><div class="num" id="statPosts">0</div><div class="lbl">Posts</div></div>
-          <div class="profile-stat"><div class="num" id="statRecipes">0</div><div class="lbl">Receitas</div></div>
-          <div class="profile-stat"><div class="num" id="statLikes">0</div><div class="lbl">Curtidas</div></div>
-        </div>
-      </div>
-      <h3 class="section-title mb-1">Minhas Receitas</h3>
-      <div id="myRecipes"></div>
-      <h3 class="section-title mb-1 mt-2">Minhas Avaliações</h3>
-      <div id="myReviews"></div>
-    </section>
-  </main>
-
-  <!-- FAB -->
-  <button class="fab pulse" id="fabBtn" aria-label="Criar">✚</button>
-
-  <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
-    <div class="bottom-nav-inner">
-      <button class="nav-item active" data-view="feed">
-        <span class="nav-icon">🏠</span>
-        <span>Início</span>
-      </button>
-      <button class="nav-item" data-view="recipes">
-        <span class="nav-icon">🍽️</span>
-        <span>Receitas</span>
-      </button>
-      <button class="nav-item" data-view="explore">
-        <span class="nav-icon">🗺️</span>
-        <span>Explorar</span>
-      </button>
-      <button class="nav-item" data-view="consume">
-        <span class="nav-icon">🛒</span>
-        <span>Consumo</span>
-      </button>
-      <button class="nav-item" data-view="connect">
-        <span class="nav-icon">💕</span>
-        <span>Conexões</span>
-      </button>
-    </div>
-  </nav>
-
-  <!-- Create Modal -->
-  <div class="modal-overlay" id="createModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Criar Novo</h3>
-        <button class="icon-btn" id="closeCreateModal">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="tabs" id="createTabs">
-          <button class="tab active" data-create="post">📝 Post</button>
-          <button class="tab" data-create="recipe">🍽️ Receita</button>
-          <button class="tab" data-create="review">⭐ Avaliação</button>
-        </div>
-        <div id="createForm"></div>
-      </div>
     </div>
   </div>
 
-  <!-- Detail Modal -->
-  <div class="modal-overlay" id="detailModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 id="detailTitle">Detalhes</h3>
-        <button class="icon-btn" id="closeDetailModal">✕</button>
-      </div>
-      <div class="modal-body" id="detailBody"></div>
-      <div class="modal-footer" id="detailFooter"></div>
-    </div>
-  </div>
+  <script>
+    // ============================================
+    // BIBLIOTECAS GLOBAIS
+    // ============================================
+    // motion = Motion One (Framer Motion Web)
+    // lottie = Lottie Web
+    const { animate, spring } = window.Motion;
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js"></script>
+    // ============================================
+    // 1. SISTEMA DE AVALIACAO COM ESTRELAS
+    // ============================================
+
+    const starsContainer = document.getElementById('starsContainer');
+    const lottieContainer = document.getElementById('lottieContainer');
+    const ratingFeedback = document.getElementById('ratingFeedback');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const feedbackText = document.getElementById('feedbackText');
+
+    let currentRating = 0;
+    let hasRated = false;
+    let lottieAnim = null;
+
+    // SVG path de uma estrela de 5 pontas
+    const starPath = "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z";
+
+    // Gera as 5 estrelas dinamicamente
+    function createStars() {
+      for (let i = 1; i <= 5; i++) {
+        const star = document.createElement('div');
+        star.className = 'star-item';
+        star.dataset.value = i;
+        star.innerHTML = `
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path class="star-bg" d="${starPath}"/>
+            <path class="star-fill" d="${starPath}"/>
+          </svg>
+        `;
+
+        // Eventos de interacao
+        star.addEventListener('mouseenter', () => handleStarHover(i));
+        star.addEventListener('mouseleave', () => handleStarLeave());
+        star.addEventListener('click', () => handleStarClick(i));
+        star.addEventListener('touchstart', (e) => { e.preventDefault(); handleStarHover(i); });
+        star.addEventListener('touchend', (e) => { e.preventDefault(); handleStarClick(i); });
+
+        starsContainer.appendChild(star);
+      }
+    }
+
+    // Hover: anima escala suave com Motion One (spring physics)
+    function handleStarHover(value) {
+      if (hasRated) return; // Bloqueia hover apos confirmar
+
+      const stars = document.querySelectorAll('.star-item');
+      stars.forEach((star, index) => {
+        const starValue = index + 1;
+
+        if (starValue <= value) {
+          // Estrelas ate o valor hover ficam ativas
+          star.classList.add('active');
+          // Efeito de escala suave com spring physics (Motion One)
+          animate(star, { scale: [1, 1.25, 1.15] }, { 
+            type: spring, 
+            stiffness: 300, 
+            damping: 15,
+            duration: 0.4 
+          });
+        } else {
+          star.classList.remove('active');
+          animate(star, { scale: 1 }, { duration: 0.2 });
+        }
+      });
+
+      updateFeedback(value, false);
+    }
+
+    // Mouse leave: reseta para o rating confirmado (ou zero)
+    function handleStarLeave() {
+      if (hasRated) return;
+
+      const stars = document.querySelectorAll('.star-item');
+      stars.forEach(star => {
+        star.classList.remove('active');
+        animate(star, { scale: 1 }, { duration: 0.2 });
+      });
+
+      updateFeedback(0, false);
+    }
+
+    // Click: confirma a avaliacao
+    function handleStarClick(value) {
+      currentRating = value;
+      hasRated = true;
+
+      // Ativa visualmente as estrelas ate o valor
+      const stars = document.querySelectorAll('.star-item');
+      stars.forEach((star, index) => {
+        const starValue = index + 1;
+        if (starValue <= value) {
+          star.classList.add('active');
+          // Efeito de "pop" na estrela clicada com spring mais elastico
+          animate(star, { scale: [1, 1.4, 1.2] }, { 
+            type: spring, 
+            stiffness: 400, 
+            damping: 10,
+            delay: index * 0.06 // Stagger effect: cada estrela anima com delay crescente
+          });
+        } else {
+          star.classList.remove('active');
+          animate(star, { scale: 0.9 }, { duration: 0.2 });
+        }
+      });
+
+      // Dispara animacao Lottie de sucesso
+      playLottieSuccess();
+
+      // Atualiza feedback
+      updateFeedback(value, true);
+
+      // Efeito de glow no container
+      animate(starsContainer, { 
+        filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1)'] 
+      }, { duration: 0.5 });
+    }
+
+    // Atualiza texto de feedback
+    function updateFeedback(value, confirmed) {
+      if (value === 0) {
+        ratingFeedback.classList.remove('show');
+        return;
+      }
+
+      ratingFeedback.classList.add('show');
+      scoreDisplay.textContent = value + '.0';
+
+      if (confirmed) {
+        const messages = [
+          'Precisa melhorar...',
+          'Bom, mas pode ser melhor!',
+          'Receita gostosa!',
+          'Excelente receita!',
+          'Perfeita! Incrivel!'
+        ];
+        feedbackText.textContent = '/ 5.0 - ' + messages[value - 1];
+        feedbackText.style.color = 'var(--primary)';
+      } else {
+        feedbackText.textContent = 'Toque para confirmar ' + value + ' estrelas';
+        feedbackText.style.color = 'var(--text-light)';
+      }
+    }
+
+    // ============================================
+    // LOTTIE SUCCESS ANIMATION
+    // ============================================
+
+    // Usa uma animacao publica de estrelas/celebracao do LottieFiles
+    // URL da animacao de "confetti stars" gratuito
+    const LOTTIE_URL = 'https://assets10.lottiefiles.com/packages/lf20_u4yrau.json';
+
+    function playLottieSuccess() {
+      // Mostra o container
+      lottieContainer.classList.add('active');
+
+      // Limpa animacao anterior
+      lottieContainer.innerHTML = '';
+
+      // Carrega e toca a animacao Lottie
+      lottieAnim = lottie.loadAnimation({
+        container: lottieContainer,
+        renderer: 'svg',
+        loop: false,
+        autoplay: true,
+        path: LOTTIE_URL // Animacao de estrelas brilhando/celebracao
+      });
+
+      // Escala a animacao via CSS para caber no container
+      lottieContainer.querySelector('svg')?.style?.setProperty('transform', 'scale(1.5)');
+
+      // Esconde apos terminar
+      lottieAnim.addEventListener('complete', () => {
+        setTimeout(() => {
+          lottieContainer.classList.remove('active');
+          lottieContainer.innerHTML = '';
+        }, 500);
+      });
+    }
+
+    // ============================================
+    // 2. BOTAO DE CURTIR (HEART SVG STROKE FILL)
+    // ============================================
+
+    const heartButton = document.getElementById('heartButton');
+    const likeCount = document.getElementById('likeCount');
+    const heartParticles = document.getElementById('heartParticles');
+
+    let isLiked = false;
+    let likeCountValue = 42;
+
+    heartButton.addEventListener('click', handleHeartClick);
+
+    function handleHeartClick() {
+      isLiked = !isLiked;
+
+      if (isLiked) {
+        // CURTIR: ativa a animacao
+        heartButton.classList.add('liked');
+        likeCountValue++;
+
+        // Anima o contorno SVG (stroke-dashoffset) via CSS transition
+        // O CSS ja controla: .liked .heart-stroke { stroke-dashoffset: 0 }
+        // Isso desenha o traço da esquerda para direita
+
+        // Apos o stroke completar (0.6s), o fill aparece via CSS
+        // E entao aplicamos o efeito de pulso com Motion One
+        setTimeout(() => {
+          // Pulsacao de impacto no botao inteiro
+          animate(heartButton, { 
+            scale: [1, 1.15, 1] 
+          }, { 
+            type: spring, 
+            stiffness: 500, 
+            damping: 12,
+            duration: 0.5 
+          });
+
+          // Efeito de pulso no SVG do coracao
+          const heartSvg = heartButton.querySelector('.heart-svg');
+          animate(heartSvg, { 
+            scale: [1, 1.3, 1.1, 1] 
+          }, { 
+            type: spring, 
+            stiffness: 400, 
+            damping: 8 
+          });
+
+          // Particulas de explosao
+          spawnHeartParticles();
+
+        }, 600); // Aguarda o stroke completar
+
+      } else {
+        // DESCURTIR: reverte suavemente
+        heartButton.classList.remove('liked');
+        likeCountValue--;
+
+        // Anima o botao voltando ao normal
+        animate(heartButton, { scale: [1, 0.95, 1] }, { duration: 0.3 });
+      }
+
+      // Atualiza contador com animacao de numero
+      animateCounter(likeCount, likeCountValue);
+    }
+
+    // Anima o numero do contador (efeito de contagem)
+    function animateCounter(element, targetValue) {
+      const startValue = parseInt(element.textContent);
+      const diff = targetValue - startValue;
+      const duration = 400;
+      const startTime = performance.now();
+
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Easing ease-out
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(startValue + diff * easeOut);
+        element.textContent = current;
+
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        }
+      }
+
+      requestAnimationFrame(update);
+
+      // Efeito de escala no numero
+      animate(element, { scale: [1, 1.3, 1] }, { duration: 0.3 });
+    }
+
+    // Gera particulas que explodem do centro do coracao
+    function spawnHeartParticles() {
+      heartParticles.innerHTML = '';
+      const colors = ['#ff4757', '#ff6b81', '#ff4757', '#e74c3c', '#ff9ff3'];
+
+      for (let i = 0; i < 8; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.background = colors[i % colors.length];
+
+        // Posicao e direcao aleatoria
+        const angle = (i / 8) * Math.PI * 2;
+        const distance = 40 + Math.random() * 30;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+
+        heartParticles.appendChild(particle);
+
+        // Anima cada particula com Motion One
+        animate(particle, {
+          x: [0, tx],
+          y: [0, ty],
+          opacity: [1, 0],
+          scale: [1, 0.2]
+        }, {
+          duration: 0.6,
+          delay: i * 0.03,
+          easing: 'ease-out'
+        });
+      }
+
+      // Limpa particulas apos animacao
+      setTimeout(() => { heartParticles.innerHTML = ''; }, 700);
+    }
+
+    // ============================================
+    // INICIALIZACAO
+    // ============================================
+    createStars();
+  </script>
+
 </body>
 </html>
