@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1B4D3E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Elograin - SuperApp para comunidade vegana">
+  <title>Elograin</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Bibliotecas de animação (CDN) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/motion@10.18.0/dist/motion.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <script>window.addEventListener('error',function(e){if(document.getElementById('dbgErr'))return;var d=document.createElement('div');d.id='dbgErr';d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#c0392b;color:#fff;font:12px monospace;padding:8px;word-break:break-all';d.textContent='Erro: '+(e.message||'')+' ('+String(e.filename||'').split('/').pop()+':'+e.lineno+')';document.body&&document.body.appendChild(d)});</script>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Swipe to Delete Confirmation Overlay -->
+  <div class="swipe-overlay" id="swipeOverlay">
+    <div class="swipe-modal">
+      <div class="warning-icon">🗑️</div>
+      <h3>Excluir post?</h3>
+      <p id="swipePostTitle">Esta acao nao pode ser desfeita.</p>
+
+      <div class="swipe-track" id="swipeTrack">
+        <div class="swipe-progress" id="swipeProgress"></div>
+        <div class="swipe-track-inner">
+          <span class="swipe-label" id="swipeLabel">Arraste para excluir →</span>
+          <span class="swipe-success" id="swipeSuccess">
+            ✅ Excluindo...
+          </span>
+        </div>
+        <div class="swipe-handle" id="swipeHandle">
+          🗑️
+        </div>
+      </div>
+
+      <button class="swipe-cancel" id="swipeCancel" onclick="closeSwipeModal()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon">🌿</div>
+      <span>Elograin</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
+      <button class="icon-btn" id="notifBtn" aria-label="Notificacoes">🔔</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="mainContent">
+    <!-- FEED -->
+    <section class="view active" id="feedView">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="feedSearch" placeholder="Buscar na comunidade...">
+      </div>
+      <div class="tag-list" id="feedTags">
+        <button class="tag active" data-tag="todos">Todos</button>
+        <button class="tag" data-tag="dica">💡 Dicas</button>
+        <button class="tag" data-tag="experiencia">✨ Experiencias</button>
+        <button class="tag" data-tag="duvida">❓ Duvidas</button>
+      </div>
+      <!-- Skeleton Feed -->
+      <div id="feedSkeleton">
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-header">
+            <div class="skeleton skeleton-avatar"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+            </div>
+          </div>
+          <div class="skeleton skeleton-img"></div>
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton-actions">
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+            <div class="skeleton skeleton-action"></div>
+          </div>
+        </div>
+      </div>
+      <div id="feedPosts" class="hidden"></div>
+    </section>
+
+    <!-- RECIPES -->
+    <section class="view" id="recipesView">
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="recipeSearch" placeholder="Buscar receitas veganas...">
+      </div>
+      <div class="tabs" id="recipeTabs">
+        <button class="tab active" data-tab="todas">Todas</button>
+        <button class="tab" data-tab="economica">💰 Economicas</button>
+        <button class="tab" data-tab="rapida">⚡ Rapidas</button>
+        <button class="tab" data-tab="sobremesa">🍰 Sobremesas</button>
+      </div>
+      <div id="recipesSkeleton">
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+        <div class="skeleton-recipe">
+          <div class="skeleton skeleton-thumb"></div>
+          <div style="flex:1">
+            <div class="skeleton skeleton-line skeleton-line-title"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+      </div>
+      <div id="recipesList" class="hidden"></div>
+    </section>
+
+    <!-- EXPLORE -->
+    <section class="view" id="exploreView">
+      <div class="tabs" id="exploreTabs">
+        <button class="tab active" data-tab="mapa">🗺️ Mapa</button>
+        <button class="tab" data-tab="eventos">🎉 Eventos</button>
+        <button class="tab" data-tab="avaliacoes">⭐ Avaliacoes</button>
+      </div>
+      <div id="exploreContent">
+        <div id="exploreSkeleton">
+          <div class="skeleton" style="width:100%;height:320px;border-radius:16px;margin-bottom:16px"></div>
+          <div class="skeleton-place">
+            <div class="skeleton skeleton-place-img"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-title"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            </div>
+          </div>
+          <div class="skeleton-place">
+            <div class="skeleton skeleton-place-img"></div>
+            <div style="flex:1">
+              <div class="skeleton skeleton-line skeleton-line-title"></div>
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+              <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            </div>
+          </div>
+        </div>
+        <div id="exploreRealContent" class="hidden"></div>
+      </div>
+    </section>
+
+    <!-- CONSUME -->
+    <section class="view" id="consumeView">
+      <div class="tabs" id="consumeTabs">
+        <button class="tab active" data-tab="mercado">🛒 Mercado</button>
+        <button class="tab" data-tab="beleza">💄 Beleza</button>
+      </div>
+      <div id="consumeContent"></div>
+    </section>
+
+    <!-- CONNECT -->
+    <section class="view" id="connectView">
+      <div class="tabs" id="connectTabs">
+        <button class="tab active" data-tab="encontros">💕 Encontros</button>
+        <button class="tab" data-tab="amizades">🤝 Amizades</button>
+      </div>
+      <div id="connectContent"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="view" id="profileView">
+      <div class="card profile-card">
+        <div class="avatar avatar-lg" id="profileAvatar">🦁</div>
+        <h2 id="profileName">Voce</h2>
+        <p style="color: var(--text-light); font-size: 0.9rem;" id="profileBio">Membro da comunidade Elograin</p>
+        <div class="profile-stats">
+          <div class="profile-stat"><div class="num" id="statPosts">0</div><div class="lbl">Posts</div></div>
+          <div class="profile-stat"><div class="num" id="statRecipes">0</div><div class="lbl">Receitas</div></div>
+          <div class="profile-stat"><div class="num" id="statLikes">0</div><div class="lbl">Curtidas</div></div>
+        </div>
+      </div>
+      <h3 class="section-title mb-1">Minhas Receitas</h3>
+      <div id="myRecipes"></div>
+      <h3 class="section-title mb-1 mt-2">Minhas Avaliacoes</h3>
+      <div id="myReviews"></div>
+    </section>
+  </main>
+
+  <!-- FAB -->
+  <button class="fab pulse" id="fabBtn" aria-label="Criar">✚</button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="nav-item active" data-view="feed">
+        <span class="nav-icon">🏠</span>
+        <span>Inicio</span>
+      </button>
+      <button class="nav-item" data-view="recipes">
+        <span class="nav-icon">🍽️</span>
+        <span>Receitas</span>
+      </button>
+      <button class="nav-item" data-view="explore">
+        <span class="nav-icon">🗺️</span>
+        <span>Explorar</span>
+      </button>
+      <button class="nav-item" data-view="consume">
+        <span class="nav-icon">🛒</span>
+        <span>Consumo</span>
+      </button>
+      <button class="nav-item" data-view="connect">
+        <span class="nav-icon">💕</span>
+        <span>Conexoes</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Create Modal -->
+  <div class="modal-overlay" id="createModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Criar Novo</h3>
+        <button class="icon-btn" id="closeCreateModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="tabs" id="createTabs">
+          <button class="tab active" data-create="post">📝 Post</button>
+          <button class="tab" data-create="recipe">🍽️ Receita</button>
+          <button class="tab" data-create="review">⭐ Avaliacao</button>
+        </div>
+        <div id="createForm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="detailTitle">Detalhes</h3>
+        <button class="icon-btn" id="closeDetailModal">✕</button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+      <div class="modal-footer" id="detailFooter"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+/* ===== Elo: animações de Curtir e Avaliar (Motion One + Lottie Web) ===== */
+var Elo = (function () {
+  'use strict';
+  // Motion/Lottie carregam com defer: buscamos no momento do uso, nunca antes
+  var animate = function () { return window.Motion && window.Motion.animate ? window.Motion.animate.apply(null, arguments) : null; };
+  var hasMotion = function () { return !!(window.Motion && window.Motion.animate); };
+  var stagger = function (n) { return window.Motion && window.Motion.stagger ? window.Motion.stagger(n) : 0; };
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var D = function (s) { return reduce ? 0.01 : s; };   // encurta tudo se o usuário pediu menos movimento
+  var OVERSHOOT = [0.34, 1.56, 0.64, 1];                // easing "elástico" (passa um pouco do alvo e volta)
+  var HEART = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+  var STAR = 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z';
+  var SPARK = {"v":"5.7.0","fr":60,"ip":0,"op":60,"w":320,"h":120,"nm":"brilho","ddd":0,"assets":[],"layers":[{"ty":4,"ind":1,"nm":"spark0","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":0,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":34,"s":[90]}]},"p":{"a":0,"k":[40,60,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":14,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":34,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":4.2},"is":{"a":0,"k":0},"or":{"a":0,"k":14},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.78,0.2,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]},{"ty":4,"ind":2,"nm":"spark1","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":4,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":38,"s":[90]}]},"p":{"a":0,"k":[95,28,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":4,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":18,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":38,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":3.0},"is":{"a":0,"k":0},"or":{"a":0,"k":10},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.9,0.5,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]},{"ty":4,"ind":3,"nm":"spark2","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":2,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":36,"s":[90]}]},"p":{"a":0,"k":[160,60,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":2,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":16,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":36,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":5.3999999999999995},"is":{"a":0,"k":0},"or":{"a":0,"k":18},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.62,0.2,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]},{"ty":4,"ind":4,"nm":"spark3","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":7,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":41,"s":[90]}]},"p":{"a":0,"k":[225,30,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":7,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":21,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":41,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":3.3},"is":{"a":0,"k":0},"or":{"a":0,"k":11},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.78,0.2,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]},{"ty":4,"ind":5,"nm":"spark4","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":5,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":39,"s":[90]}]},"p":{"a":0,"k":[280,62,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":5,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":19,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":39,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":4.5},"is":{"a":0,"k":0},"or":{"a":0,"k":15},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.9,0.5,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]},{"ty":4,"ind":6,"nm":"spark5","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":10,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":44,"s":[90]}]},"p":{"a":0,"k":[125,95,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":10,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":24,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":44,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":2.6999999999999997},"is":{"a":0,"k":0},"or":{"a":0,"k":9},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.62,0.2,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]},{"ty":4,"ind":7,"nm":"spark6","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":12,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":46,"s":[90]}]},"p":{"a":0,"k":[200,96,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":12,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":26,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":46,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":3.0},"is":{"a":0,"k":0},"or":{"a":0,"k":10},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.78,0.2,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]},{"ty":4,"ind":8,"nm":"spark7","ip":0,"op":60,"st":0,"sr":1,"ddd":0,"ks":{"o":{"a":0,"k":100},"r":{"a":1,"k":[{"t":14,"s":[0],"i":{"x":[0.5],"y":[1]},"o":{"x":[0.5],"y":[0]}},{"t":48,"s":[90]}]},"p":{"a":0,"k":[60,96,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":14,"s":[0,0,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":28,"s":[100,100,100],"i":{"x":[0.3,0.3,0.3],"y":[1,1,1]},"o":{"x":[0.7,0.7,0.7],"y":[0,0,0]}},{"t":48,"s":[0,0,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"sr","sy":1,"d":1,"pt":{"a":0,"k":4},"p":{"a":0,"k":[0,0]},"r":{"a":0,"k":0},"ir":{"a":0,"k":2.4},"is":{"a":0,"k":0},"or":{"a":0,"k":8},"os":{"a":0,"k":0}},{"ty":"fl","c":{"a":0,"k":[1,0.9,0.5,1]},"o":{"a":0,"k":100},"r":1},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}]}]}; // animação Lottie (brilhos) embutida: funciona offline
+
+  /* ---------- CORAÇÃO ----------
+     Camadas: (1) contorno cinza fixo, (2) preenchimento vermelho (opacity 0),
+     (3) contorno vermelho revelado por um clipPath cuja largura cresce 0 → 24.
+     É esse retângulo que faz o "traço" avançar da esquerda para a direita. */
+  function heartHTML(id, liked) {
+    return '<span class="heart-wrap"><svg class="heart" viewBox="0 0 24 24" aria-hidden="true">' +
+      '<defs><clipPath id="hc-' + id + '"><rect x="0" y="0" width="' + (liked ? 24 : 0) + '" height="24"/></clipPath></defs>' +
+      '<path class="h-ghost" d="' + HEART + '"/>' +
+      '<path class="h-fill" d="' + HEART + '" style="opacity:' + (liked ? 1 : 0) + '"/>' +
+      '<g clip-path="url(#hc-' + id + ')"><path class="h-stroke" d="' + HEART + '"/></g></svg></span>';
+  }
+
+  // Anima o coração para o estado "curtido" (true) ou "normal" (false)
+  function setHeart(btn, liked) {
+    var wrap = btn.querySelector('.heart-wrap'), rect = btn.querySelector('rect'), fill = btn.querySelector('.h-fill');
+    var token = btn._t = (btn._t || 0) + 1;             // cancela animação anterior se o usuário clicar rápido
+    var setW = function (w) { rect.setAttribute('width', w); };
+    if (!hasMotion()) { setW(liked ? 24 : 0); fill.style.opacity = liked ? 1 : 0; return; }
+    if (liked) {
+      setW(0); fill.style.opacity = 0;
+      // 1) Traço desenhado da esquerda para a direita (progress vai de 0 a 1)
+      animate(function (p) { setW(24 * p); }, { duration: D(0.55), easing: 'ease-in-out' }).finished.then(function () {
+        if (btn._t !== token) return;
+        // 2) Contorno completo → preenche com cor vibrante
+        animate(fill, { opacity: 1 }, { duration: D(0.12) });
+        // 3) Pulso de impacto: cresce, encolhe um pouco e assenta
+        animate(wrap, { scale: [1, 1.4, 0.92, 1] }, { duration: D(0.5), easing: 'ease-out' });
+      });
+    } else {
+      // Desfazer: esvazia o preenchimento e recolhe o traço suavemente (direita → esquerda)
+      animate(fill, { opacity: 0 }, { duration: D(0.2) });
+      animate(wrap, { scale: [1, 0.85, 1] }, { duration: D(0.3) });
+      animate(function (p) { setW(24 * (1 - p)); }, { duration: D(0.3), easing: 'ease-in' });
+    }
+  }
+
+  /* ---------- ESTRELAS ----------
+     mountRating(container, { initial, confirm, noun, onChange, onConfirm }) */
+  function mountRating(box, o) {
+    if (!box) return;
+    o = o || {};
+    var val = o.initial || 0, done = false, needConfirm = o.confirm !== false, noun = o.noun || 'Avaliação';
+    box.classList.add('rate-box');
+    box.innerHTML = '<div class="stars-wrap"><div class="stars-row" role="radiogroup" aria-label="Nota de 1 a 5">' +
+      [1, 2, 3, 4, 5].map(function (n) {
+        return '<button type="button" class="star-b" role="radio" aria-checked="false" aria-label="' + n + ' de 5"><svg viewBox="0 0 24 24"><path d="' + STAR + '"/></svg></button>';
+      }).join('') + '</div><div class="lottie-slot"></div></div>' +
+      (needConfirm ? '<button type="button" class="btn btn-primary w-full rate-confirm" disabled>Confirmar nota</button>' : '') +
+      '<div class="rate-result" aria-live="polite"></div>';
+    var stars = [].slice.call(box.querySelectorAll('.star-b')), btn = box.querySelector('.rate-confirm'),
+        slot = box.querySelector('.lottie-slot'), result = box.querySelector('.rate-result');
+
+    // Pinta as n primeiras estrelas; as pintadas (a selecionada e todas as anteriores) crescem levemente
+    function paint(n) {
+      stars.forEach(function (s, i) {
+        var on = i < n;
+        s.classList.toggle('on', on);
+        s.setAttribute('aria-checked', String(val === i + 1));
+        if (s._on === on) return;
+        s._on = on;
+        if (hasMotion()) animate(s, { scale: on ? 1.18 : 1 }, { duration: D(0.25), easing: OVERSHOOT });
+      });
+    }
+    stars.forEach(function (s, i) {
+      s.addEventListener('pointerenter', function (e) { if (!done && e.pointerType === 'mouse') paint(i + 1); }); // hover (só mouse)
+      s.addEventListener('click', function () {
+        if (done) return;
+        val = i + 1; paint(val);
+        if (btn) btn.disabled = false;
+        if (o.onChange) o.onChange(val);
+      });
+    });
+    box.querySelector('.stars-row').addEventListener('pointerleave', function () { if (!done) paint(val); });
+    paint(val);
+
+    if (btn) btn.addEventListener('click', function () {
+      if (done || !val) return;
+      done = true; btn.disabled = true; box.classList.add('locked');
+      var on = stars.slice(0, val);
+      // Onda de pulso nas estrelas selecionadas, uma após a outra
+      if (hasMotion()) animate(on, { scale: [1.18, 1.5, 1.18] }, { delay: stagger(0.07), duration: D(0.5) });
+      // Brilho Lottie por cima das estrelas (dispara uma vez)
+      if (window.lottie && !reduce) {
+        slot.innerHTML = '';
+        lottie.loadAnimation({ container: slot, renderer: 'svg', loop: false, autoplay: true, animationData: SPARK });
+      }
+      // Feedback com a pontuação escolhida
+      result.textContent = val.toFixed(1) + ' / 5.0 - ' + noun + ' Avaliada!';
+      if (hasMotion()) animate(result, { opacity: [0, 1], transform: ['translateY(8px)', 'translateY(0)'] }, { duration: D(0.45) });
+      if (o.onConfirm) o.onConfirm(val);
+    });
+  }
+  return { heartHTML: heartHTML, setHeart: setHeart, mountRating: mountRating };
+})();
+
+</script>
+  <script src="app.js"></script>
+</body>
+</html>
