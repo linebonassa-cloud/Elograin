@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EloGrain — Avalie e Curta</title>
+
+<!-- ============ CDNs ============ -->
+<!-- Framer Motion (versão Web / Motion One - UMD) -->
+<script src="https://cdn.jsdelivr.net/npm/motion@11.11.17/dist/motion.js"></script>
+<!-- Lottie Web -->
+<script src="https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+
+<style>
+/* ==========================================================
+   RESET + BASE — simula tela de smartphone moderno
+   ========================================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg-app: #0e0f13;
+  --card: #171922;
+  --card-2: #1e2230;
+  --text: #f4f5f7;
+  --text-dim: #9aa0b0;
+  --accent: #ffb020;       /* dourado das estrelas */
+  --like: #ff3b6b;         /* vermelho/rosa vibrante do coração */
+  --like-dark: #d91e50;
+  --radius: 22px;
+}
+
+body {
+  font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(1200px 800px at 20% 10%, #1c2030 0%, #0b0c10 60%);
+  color: var(--text);
+  padding: 24px;
+}
+
+/* ---------- Moldura do smartphone ---------- */
+.phone {
+  width: 375px;
+  max-width: 100%;
+  height: 780px;
+  max-height: 92vh;
+  background: var(--bg-app);
+  border-radius: 42px;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 40px 90px rgba(0,0,0,.65), inset 0 0 0 8px #05060a;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  scrollbar-width: none;
+}
+.phone::-webkit-scrollbar { display: none; }
+
+.notch {
+  width: 120px; height: 26px;
+  background: #05060a;
+  border-radius: 0 0 18px 18px;
+  margin: 0 auto;
+  position: sticky; top: 0; z-index: 30;
+}
+
+/* ---------- Conteúdo do app ---------- */
+.screen { padding: 18px 20px 40px; }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 18px; }
+.topbar .logo { font-weight: 800; font-size: 20px; letter-spacing: .3px; }
+.topbar .logo span { color: var(--accent); }
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: linear-gradient(135deg, #ffb020, #ff3b6b);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px; color: #1a1a1a;
+}
+
+/* ---------- Card da receita ---------- */
+.recipe-card {
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 18px 40px rgba(0,0,0,.4);
+}
+.hero {
+  height: 190px;
+  background:
+    radial-gradient(220px 140px at 80% 20%, rgba(255,176,32,.35), transparent 70%),
+    radial-gradient(260px 180px at 15% 90%, rgba(255,59,107,.28), transparent 70%),
+    linear-gradient(150deg, #2a2f42, #171922);
+  position: relative;
+  display: grid; place-items: center;
+}
+.hero .dish { font-size: 72px; filter: drop-shadow(0 12px 18px rgba(0,0,0,.5)); }
+.hero .badge {
+  position: absolute; top: 14px; left: 14px;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(6px);
+  padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+}
+
+.recipe-body { padding: 20px 20px 24px; }
+.recipe-body h1 { font-size: 21px; font-weight: 800; line-height: 1.25; }
+.meta { display: flex; gap: 14px; margin: 10px 0 6px; color: var(--text-dim); font-size: 13px; }
+.meta b { color: var(--text); }
+.desc { color: var(--text-dim); font-size: 13.5px; line-height: 1.55; margin-top: 6px; }
+
+.divider { height: 1px; background: rgba(255,255,255,.07); margin: 22px 0; }
+
+.section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px; color: var(--text-dim); margin-bottom: 14px; }
+
+/* ==========================================================
+   1) SISTEMA DE AVALIAÇÃO COM ESTRELAS
+   ========================================================== */
+.stars-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 8px; padding: 6px 4px; position: relative;
+}
+.star {
+  background: none; border: none; cursor: pointer;
+  width: 52px; height: 52px; padding: 4px;
+  will-change: transform; /* otimiza o scale do Framer Motion */
+  touch-action: manipulation;
+}
+.star svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.star .star-path {
+  fill: transparent;
+  stroke: #4a4f63;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  transition: fill .25s ease, stroke .25s ease;
+}
+.star.active .star-path { fill: var(--accent); stroke: var(--accent); }
+
+/* Feedback da nota — aparece após confirmação */
+.rating-feedback {
+  margin-top: 16px;
+  text-align: center;
+  font-weight: 700; font-size: 15px;
+  color: var(--accent);
+  opacity: 0;
+  transform: translateY(8px);
+  min-height: 22px;
+}
+
+/* Container do overlay Lottie de sucesso */
+.lottie-overlay {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  pointer-events: none;
+  z-index: 20;
+}
+.lottie-overlay > div { width: 260px; height: 260px; }
+
+/* ==========================================================
+   2) BOTÃO CURTIR — coração com ENCHIMENTO LÍQUIDO
+   ------------------------------------------------------------
+   Estrutura do SVG:
+   - <clipPath> com a forma do coração: recorta tudo que
+     estiver fora do coração;
+   - <g clip-path> contém o "líquido" (rect + onda). Como está
+     recortado, só o líquido DENTRO do coração aparece;
+   - animamos o rect com scaleY (transform-origin no fundo),
+     então ele sobe como um líquido enchendo de baixo p/ cima;
+   - por cima, o contorno incolor do coração permanece visível.
+   ========================================================== */
+.actions-row { display: flex; align-items: center; justify-content: center; }
+
+.like-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card-2);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  padding: 12px 22px 12px 14px;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 15px; font-weight: 600;
+  transition: color .3s ease, border-color .3s ease;
+  touch-action: manipulation;
+}
+.like-btn.liked { color: var(--like); border-color: rgba(255,59,107,.45); }
+
+.heart-wrap { width: 30px; height: 30px; will-change: transform; }
+.heart-wrap svg { width: 100%; height: 100%; overflow: visible; display: block; }
+
+/* O rect do líquido cresce a partir da base do viewBox (y=24) */
+#liquid {
+  fill: url(#liquidGrad);               /* gradiente vermelho: líquido denso embaixo */
+  transform-box: view-box;              /* origem relativa ao viewBox inteiro */
+  transform-origin: 50% 100%;           /* âncora no fundo => sobe como líquido */
+  transform: scaleY(0);                 /* começa vazio */
+  will-change: transform;
+}
+
+/* Onda na superfície do líquido (leve balanço lateral) */
+#wave {
+  fill: rgba(255,255,255,.25);
+  transform-box: view-box;
+}
+
+/* Corpo do coração: INCOLOR e sempre visível por cima do líquido */
+#heart-body {
+  fill: rgba(255,255,255,.03);          /* leve brilho interno, quase incolor */
+  stroke: #6b7186;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke .3s ease;
+}
+.like-btn.liked #heart-body { stroke: var(--like); }
+
+.like-count { font-variant-numeric: tabular-nums; }
+
+.footer-hint { text-align: center; color: var(--text-dim); font-size: 12px; margin-top: 26px; opacity: .7; }
+</style>
+</head>
+<body>
+
+  <!-- ================= Smartphone ================= -->
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="screen">
+
+      <div class="topbar">
+        <div class="logo">Elo<span>Grain</span></div>
+        <div class="avatar">C</div>
+      </div>
+
+      <!-- Card da receita -->
+      <article class="recipe-card">
+        <div class="hero">
+          <span class="badge">⭐ Destaque da semana</span>
+          <span class="dish">🍝</span>
+        </div>
+        <div class="recipe-body">
+          <h1>Espaguete ao Molho da Casa</h1>
+          <div class="meta">
+            <span>⏱ <b>25 min</b></span>
+            <span>🔥 <b>480 kcal</b></span>
+            <span>👥 <b>2 porções</b></span>
+          </div>
+          <p class="desc">Massa al dente envolvida em um molho cremoso de tomates assados, manjericão fresco e um toque de parmesão.</p>
+
+          <div class="divider"></div>
+
+          <!-- ===== 1. AVALIAÇÃO ===== -->
+          <div class="section-title">Avalie esta receita</div>
+          <div class="stars-row" id="starsRow">
+            <button class="star" data-value="1" aria-label="1 estrela"></button>
+            <button class="star" data-value="2" aria-label="2 estrelas"></button>
+            <button class="star" data-value="3" aria-label="3 estrelas"></button>
+            <button class="star" data-value="4" aria-label="4 estrelas"></button>
+            <button class="star" data-value="5" aria-label="5 estrelas"></button>
+          </div>
+          <div class="rating-feedback" id="ratingFeedback"></div>
+
+          <div class="divider"></div>
+
+          <!-- ===== 2. CURTIR (enchimento líquido) ===== -->
+          <div class="section-title">Gostou? Deixe seu like</div>
+          <div class="actions-row">
+            <button class="like-btn" id="likeBtn" aria-pressed="false">
+              <span class="heart-wrap">
+                <svg viewBox="0 0 24 24">
+                  <defs>
+                    <!-- gradiente do "líquido": vermelho profundo embaixo, rosa vibrante em cima -->
+                    <linearGradient id="liquidGrad" x1="0" y1="1" x2="0" y2="0">
+                      <stop offset="0%"  stop-color="#c2154a"/>
+                      <stop offset="100%" stop-color="#ff3b6b"/>
+                    </linearGradient>
+                    <!-- recorte na forma exata do coração -->
+                    <clipPath id="heartClip">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </clipPath>
+                  </defs>
+
+                  <!-- LÍQUIDO: rect + onda, recortados pela forma do coração -->
+                  <g clip-path="url(#heartClip)">
+                    <!-- ondulação da superfície -->
+                    <ellipse id="wave" cx="12" cy="9" rx="13" ry="2.2"/>
+                    <!-- o líquido em si (sobe via scaleY com origem no fundo) -->
+                    <rect id="liquid" x="0" y="4.2" width="24" height="19.8"/>
+                  </g>
+
+                  <!-- CORPO DO CORAÇÃO: incolor, sempre visível por cima do líquido -->
+                  <path id="heart-body"
+                        d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </span>
+              <span class="like-label">Curtir</span>
+              <span class="like-count" id="likeCount">128</span>
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <p class="footer-hint">Toque nas estrelas para avaliar · Toque no coração para curtir</p>
+    </div>
+  </div>
+
+<script>
+/* =========================================================================
+   FRAMER MOTION (Motion One UMD) — expõe o global `Motion`
+   Lottie Web — expõe o global `lottie`
+   ========================================================================= */
+
+/* ==========================================================
+   1) SISTEMA DE AVALIAÇÃO COM ESTRELAS
+   ========================================================== */
+const STAR_PATH = "M12 2.6l2.86 6.05 6.49.6-4.9 4.28 1.43 6.36L12 16.75l-5.88 3.14 1.43-6.36-4.9-4.28 6.49-.6z";
+
+// Injeta o SVG em cada botão de estrela
+document.querySelectorAll(".star").forEach(btn => {
+  btn.innerHTML = `<svg viewBox="0 0 24 24"><path class="star-path" d="${STAR_PATH}"/></svg>`;
+});
+
+const stars      = [...document.querySelectorAll(".star")];
+const feedback   = document.getElementById("ratingFeedback");
+const starsRow   = document.getElementById("starsRow");
+let hoverRating  = 0;   // nota "preview" enquanto o cursor está sobre as estrelas
+let finalRating  = 0;   // nota confirmada com clique
+let lottieAnim   = null;
+
+/**
+ * Pinta (ativa) as estrelas até `value` e anima o SCALE de cada uma
+ * com Framer Motion: estrelas ativas crescem, inativas voltam ao normal.
+ * O efeito em cascata (stagger) é aplicado de fora para dentro.
+ */
+function paintStars(value) {
+  stars.forEach((star, i) => {
+    const active = i < value;
+    star.classList.toggle("active", active);
+
+    // Animação de escala suave com leve "mola" (efeito spring do Motion One)
+    Motion.animate(
+      star,
+      { scale: active ? 1.22 : 1 },
+      { duration: 0.35, delay: i * 0.03, easing: [0.34, 1.56, 0.64, 1] } // overshoot suave
+    );
+  });
+}
+
+/* ---- Hover: preview da nota (pointer + touch) ---- */
+stars.forEach((star, i) => {
+  star.addEventListener("mouseenter", () => { hoverRating = i + 1; paintStars(hoverRating); });
+  star.addEventListener("click",      () => confirmRating(i + 1));
+});
+starsRow.addEventListener("mouseleave", () => {
+  hoverRating = 0;
+  paintStars(finalRating); // volta à nota confirmada (ou zera se nunca avaliou)
+});
+
+/**
+ * Confirma a nota com clique:
+ * 1. Fixa a nota e pinta as estrelas
+ * 2. Dispara o pulso de "impacto" (scale up/down com spring)
+ * 3. Reproduz a animação Lottie de estrelas brilhando
+ * 4. Exibe o feedback "4.0 / 5.0 — Receita Avaliada!"
+ */
+function confirmRating(value) {
+  finalRating = value;
+  hoverRating = value;
+  paintStars(value);
+
+  // Pulso de impacto: todas as estrelas ativas "saltam" juntas
+  stars.slice(0, value).forEach((star, i) => {
+    Motion.animate(
+      star,
+      { scale: [1.22, 1.45, 1.22] },               // keyframes: sobe e volta
+      { duration: 0.5, delay: i * 0.04, easing: "ease-in-out" }
+    );
+  });
+
+  playSuccessLottie();
+
+  feedback.textContent = `${value.toFixed(1)} / 5.0 — Receita Avaliada!`;
+  // Feedback entra deslizando com fade via Framer Motion
+  Motion.animate(feedback, { opacity: [0, 1], y: [8, 0] }, { duration: 0.45, easing: "ease-out" });
+}
+
+/* ==========================================================
+   ANIMAÇÃO LOTTIE — estrelas brilhando (gerada inline)
+   ------------------------------------------------------------
+   Como um único arquivo HTML não pode carregar um .json externo
+   sem depender de links de terceiros, construímos a animação
+   Lottie programaticamente: 6 estrelas douradas que nascem no
+   centro, giram, escalam e desvanecem com brilho.
+   ========================================================== */
+function buildLottieData() {
+  const FR = 30, OP = 42, W = 300, H = 300;
+  const center = W / 2;
+
+  const easeOut = { i: { x: [0.2], y: [1] }, o: { x: [0.4], y: [0] } };
+
+  // Cria uma camada-shape de estrela (polystar) com animação de
+  // opacidade (fade in/out), rotação e escala (nasce pequena, explode)
+  function starLayer(ind, angleDeg, dist, size, delay) {
+    const rad = angleDeg * Math.PI / 180;
+    const x = center + Math.cos(rad) * dist;
+    const y = center + Math.sin(rad) * dist;
+    const appear = delay, peak = delay + 8, gone = OP;
+
+    return {
+      ddd: 0, ind, ty: 4, nm: `star-${ind}`, sr: 1, ip: 0, op: OP, st: 0,
+      ks: {
+        // Opacidade: 0 -> 100 -> 0
+        o: { a: 1, k: [
+          { t: 0,      s: [0] },
+          { t: appear, s: [0] },
+          { t: peak,   s: [100] },
+          { t: gone,   s: [0] }
+        ]},
+        // Rotação: gira durante a explosão
+        r: { a: 1, k: [
+          { t: 0, s: [0] },
+          { t: appear, s: [0], ...easeOut },
+          { t: gone, s: [angleDeg * 1.5 + 120] }
+        ]},
+        // Posição fixa (o "burst" vem da escala)
+        p: { a: 0, k: [x, y, 0] },
+        a: { a: 0, k: [0, 0, 0] },
+        // Escala: 0% -> 130% -> 90% (efeito de brilho estourando)
+        s: { a: 1, k: [
+          { t: 0,      s: [0, 0, 100] },
+          { t: appear, s: [0, 0, 100], ...easeOut },
+          { t: peak,   s: [130, 130, 100] },
+          { t: gone,   s: [90, 90, 100] }
+        ]}
+      },
+      shapes: [{
+        ty: "gr", nm: "star", it: [
+          { ty: "sr", sy: 1, pt: { a: 0, k: 5 }, p: { a: 0, k: [0, 0] }, r: { a: 0, k: 0 },
+            ir: { a: 0, k: size * 0.42 }, is: { a: 0, k: 0 },
+            or: { a: 0, k: size },       os: { a: 0, k: 0 }, nm: "poly" },
+          { ty: "fl", c: { a: 0, k: [1, 0.76, 0.15, 1] }, o: { a: 0, k: 100 }, nm: "gold" },
+          { ty: "tr", p: { a: 0, k: [0, 0] }, a: { a: 0, k: [0, 0] },
+            s: { a: 0, k: [100, 100] }, r: { a: 0, k: 0 }, o: { a: 0, k: 100 } }
+        ]
+      }]
+    };
+  }
+
+  // Estrela central (maior) + 5 estrelas orbitando em ângulos distribuídos
+  const layers = [
+    starLayer(1, 0, 0,  42, 0),                                  // centro
+    starLayer(2, -90, 70, 22, 3),
+    starLayer(3, -30, 88, 18, 5),
+    starLayer(4,  30, 78, 20, 4),
+    starLayer(5,  90, 72, 22, 6),
+    starLayer(6, 150, 84, 18, 5)
+  ];
+
+  return { v: "5.7.4", fr: FR, ip: 0, op: OP, w: W, h: H, nm: "stars-success", ddd: 0, assets: [], layers };
+}
+
+/**
+ * Reproduz o "brilho de sucesso" por cima da área de avaliação.
+ * O overlay é criado sob demanda, a animação toca uma vez
+ * (autoplay + loop desligado) e o container é removido ao final.
+ */
+function playSuccessLottie() {
+  // Remove execução anterior, se existir (usuário reavaliando)
+  document.querySelector(".lottie-overlay")?.remove();
+  if (lottieAnim) { lottieAnim.destroy(); lottieAnim = null; }
+
+  const overlay = document.createElement("div");
+  overlay.className = "lottie-overlay";
+  const container = document.createElement("div");
+  overlay.appendChild(container);
+  starsRow.appendChild(overlay);
+
+  lottieAnim = lottie.loadAnimation({
+    container,
+    renderer: "svg",
+    loop: false,
+    autoplay: true,
+    animationData: buildLottieData()   // JSON gerado inline — sem arquivos externos
+  });
+
+  // Ao terminar, faz o overlay sumir suavemente e remove do DOM
+  lottieAnim.addEventListener("complete", () => {
+    Motion.animate(overlay, { opacity: [1, 0], scale: [1, 1.15] }, { duration: 0.4 })
+      .finished.then(() => overlay.remove());
+  });
+}
+
+/* ==========================================================
+   2) BOTÃO CURTIR — ENCHIMENTO LÍQUIDO
+   ------------------------------------------------------------
+   Técnica: SVG com <clipPath> no formato do coração.
+   Dentro dele, um <rect> (o líquido) com transform-origin no
+   FUNDO do viewBox. Animar scaleY de 0 -> 1 faz o líquido
+   subir de baixo para cima, preenchendo o coração como se
+   fosse enchendo de um fluido vermelho. Uma ellipse na
+   superfície simula a ondulação do líquido.
+   O contorno incolor fica por cima (fora do clip), sempre visível.
+   ========================================================== */
+const likeBtn     = document.getElementById("likeBtn");
+const liquid      = document.getElementById("liquid");
+const wave        = document.getElementById("wave");
+const heartWrap   = document.querySelector(".heart-wrap");
+const likeLabel   = likeBtn.querySelector(".like-label");
+const likeCountEl = document.getElementById("likeCount");
+
+let liked = false;
+let baseLikes = 128;
+let waveAnim = null; // referência à animação contínua da onda
+
+/**
+ * CURTIR — enche o coração como um líquido:
+ * 1. scaleY do rect: 0 -> 1.12 -> 1 (sobe como fluido e "assenta"
+ *    com um leve transbordo, como líquido balançando no copo)
+ * 2. O contorno fica vermelho e o rótulo muda para "Curtido"
+ * 3. Pulso de impacto no coração inteiro quando o líquido assenta
+ * 4. Onda da superfície balançando suavemente em loop
+ * 5. Contador animado
+ */
+function like() {
+  liked = true;
+  likeBtn.classList.add("liked");
+  likeBtn.setAttribute("aria-pressed", "true");
+  likeLabel.textContent = "Curtido";
+
+  // (1) Líquido enchendo: overshoot de 1.12 simula o "balanço" do fluido
+  //     ao bater no topo antes de assentar (easing com leve elasticidade)
+  Motion.animate(
+    liquid,
+    { scaleY: [0, 1.12, 1] },
+    { duration: 0.9, easing: ["ease-in", "ease-out"] }
+  );
+
+  // Onda sobe junto com o nível do líquido e fica oscilando
+  Motion.animate(wave, { y: [10, 0] }, { duration: 0.9, easing: "ease-out" });
+  startWave();
+
+  // (3) Pulso de impacto quando o líquido assenta (~0.85s)
+  //     keyframes de batida cardíaca: normal -> 1.3 -> 1 -> 1.12 -> 1
+  Motion.animate(
+    heartWrap,
+    { scale: [1, 1.3, 1, 1.12, 1] },
+    { duration: 0.55, delay: 0.85, easing: "ease-in-out" }
+  );
+
+  animateCount(baseLikes + 1);
+}
+
+/**
+ * DESCURTIR — esvazia o coração:
+ * o líquido "drena" de cima para baixo (scaleY 1 -> 0 com
+ * easing ease-in, como gravidade puxando o fluido), a onda
+ * para, e o contorno volta ao cinza.
+ */
+function unlike() {
+  liked = false;
+  likeBtn.classList.remove("liked");
+  likeBtn.setAttribute("aria-pressed", "false");
+  likeLabel.textContent = "Curtir";
+
+  stopWave();
+
+  Motion.animate(
+    liquid,
+    { scaleY: [1, 0] },
+    { duration: 0.6, easing: "ease-in" }  // drena mais rápido do que enche (gravidade)
+  );
+  Motion.animate(wave, { y: [0, 10] }, { duration: 0.5, easing: "ease-in" });
+
+  // Pequena redução suave para reforçar o "desfazer"
+  Motion.animate(heartWrap, { scale: [1, 0.85, 1] }, { duration: 0.35, easing: "ease-out" });
+
+  animateCount(baseLikes);
+}
+
+/**
+ * Ondulação contínua da superfície do líquido:
+ * anima o cx da ellipse para a esquerda/direita em loop,
+ * como a superfície de um líquido balançando. Guardamos a
+ * referência para poder parar ao descurtir.
+ */
+function startWave() {
+  stopWave();
+  waveAnim = Motion.animate(
+    wave,
+    { cx: [12, 10, 14, 12] },
+    { duration: 2.2, repeat: Infinity, easing: "ease-in-out" }
+  );
+}
+function stopWave() {
+  if (waveAnim) { waveAnim.stop(); waveAnim = null; }
+}
+
+/**
+ * Anima a mudança do contador de curtidas com um fade + slide
+ * vertical rápido (microinteração de feedback).
+ */
+function animateCount(target) {
+  Motion.animate(likeCountEl, { opacity: [1, 0], y: [0, -6] }, { duration: 0.15 }).finished
+    .then(() => {
+      likeCountEl.textContent = target;
+      return Motion.animate(likeCountEl, { opacity: [0, 1], y: [6, 0] }, { duration: 0.2 }).finished;
+    });
+}
+
+likeBtn.addEventListener("click", () => (liked ? unlike() : like()));
+
+/* ==========================================================
+   ENTRADA DA TELA — microinterações iniciais
+   ========================================================== */
+Motion.animate(".recipe-card", { opacity: [0, 1], y: [30, 0] }, { duration: 0.6, easing: "ease-out" });
+Motion.animate(".star", { opacity: [0, 1], scale: [0.6, 1] }, { duration: 0.4, delay: 0.35, easing: "ease-out" });
+Motion.animate(".like-btn", { opacity: [0, 1], y: [14, 0] }, { duration: 0.45, delay: 0.55, easing: "ease-out" });
+</script>
+</body>
+</html>
