@@ -493,11 +493,9 @@ function renderFeed(filterTag) {
 
   container.innerHTML = posts.map(function(post) {
     var badgeClass = post.tag === 'dica' ? 'vegan' : (post.tag === 'experiencia' ? 'friendly' : 'econ');
-    var mine = post.author === state.user.name;   // só o autor pode excluir
-    var menu = mine
-      ? '<button role="menuitem" onclick="copyPost(' + post.id + ')">📋 Copiar texto</button><button role="menuitem" class="danger" onclick="closePostMenus();openSwipeModal(' + post.id + ')">🗑️ Excluir post</button>'
-      : '<button role="menuitem" onclick="closePostMenus();toast(\'Post salvo! 🔖\')">🔖 Salvar post</button><button role="menuitem" onclick="copyPost(' + post.id + ')">📋 Copiar texto</button><button role="menuitem" class="danger" onclick="closePostMenus();toast(\'Obrigado! Vamos analisar o post.\')">🚩 Denunciar</button>';
+    var menu = '<button role="menuitem" onclick="closePostMenus();toast(\'Post salvo! 🔖\')">🔖 Salvar post</button><button role="menuitem" onclick="copyPost(' + post.id + ')">📋 Copiar texto</button><button role="menuitem" class="danger" onclick="closePostMenus();toast(\'Obrigado! Vamos analisar o post.\')">🚩 Denunciar</button>';
     return '<article class="card" data-id="' + post.id + '">' +
+      '<button class="delete-btn" onclick="openSwipeModal(' + post.id + ')" aria-label="Excluir post">Excluir</button>' +
       '<button class="more-btn" onclick="togglePostMenu(' + post.id + ',event)" aria-label="Mais opções" aria-haspopup="menu">⋯</button>' +
       '<div class="post-menu" id="pm-' + post.id + '" role="menu">' + menu + '</div>' +
       '<div class="card-header"><div class="avatar">' + esc(post.avatar) + '</div>' +

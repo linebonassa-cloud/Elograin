@@ -1077,10 +1077,9 @@ label {
 @media (prefers-reduced-motion: reduce) { .star-b path { transition: none; } }
 
 /* ===== v5: menu do post, comentários, toque duplo, desfazer ===== */
-.delete-btn { display: none; }
-.more-btn { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px; background: transparent; color: var(--text-light); font-size: 1.4rem; line-height: 1; cursor: pointer; z-index: 5; transition: background .15s; }
+.more-btn { position: absolute; top: 10px; right: 82px; width: 40px; height: 40px; border: 0; border-radius: 12px; background: transparent; color: var(--text-light); font-size: 1.4rem; line-height: 1; cursor: pointer; z-index: 5; transition: background .15s; }
 .more-btn:hover, .more-btn:active { background: var(--cream); }
-.post-menu { display: none; position: absolute; top: 52px; right: 10px; z-index: 6; min-width: 190px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); transform-origin: top right; }
+.post-menu { display: none; position: absolute; top: 52px; right: 82px; z-index: 6; min-width: 190px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); transform-origin: top right; }
 .post-menu.open { display: block; animation: menuIn .18s cubic-bezier(.34,1.56,.64,1); }
 .post-menu button { display: block; width: 100%; padding: 11px 12px; border: 0; background: none; border-radius: 9px; text-align: left; font: 600 .9rem 'Inter', sans-serif; color: var(--text); cursor: pointer; }
 .post-menu button:hover { background: var(--cream); }
@@ -1103,3 +1102,5 @@ label {
 .cmt-form input { flex: 1; min-width: 0; border-radius: 999px; padding: 10px 14px; border: 1px solid var(--border); background: var(--cream); color: var(--text); font-size: 1rem; }
 :focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .big-heart, .post-menu.open { animation-duration: .01ms; } }
+
+.logo .ver { font-size: .65rem; font-weight: 700; opacity: .5; margin-left: 6px; align-self: flex-end; }
