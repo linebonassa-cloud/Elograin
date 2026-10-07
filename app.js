@@ -1,14 +1,11 @@
+// Fallback: se as animações não carregarem, o app continua funcionando (coração/estrela simples)
+if (typeof Elo === 'undefined') { window.Elo = { heartHTML: function(id, l) { return '<span class="heart-wrap">' + (l ? '❤️' : '🤍') + '</span>'; }, setHeart: function(b, l) { b.querySelector('.heart-wrap').textContent = l ? '❤️' : '🤍'; }, mountRating: function(box) { if (box) box.innerHTML = '<p style="color:var(--text-light);font-size:.85rem">Avaliação indisponível no momento.</p>'; } }; }
 // ============================================
-// ELOGRAIN v2 - SuperApp Vegano
-// Skeleton Screens + Google Maps API + OpenStreetMap (Leaflet)
+// ELOGRAIN v3 - Swipe to Delete + Lixeira + OpenStreetMap
 // ============================================
 
-// ----- CONFIGURACAO GOOGLE MAPS -----
-// SUBSTITUA PELA SUA CHAVE DA API DO GOOGLE CLOUD
-// Ative: Places API (New) + Maps JavaScript API
 const GOOGLE_API_KEY = localStorage.getItem('elograin_google_api_key') || '';
 
-// ----- Dados Mockados -----
 const MOCK_POSTS = [
   { id: 1, author: "Ana Verde", avatar: "🌱", time: "2h", content: "Finalmente encontrei um queijo vegano que derrete igual o original! Testei na lasanha e ficou perfeito. Alguem mais ja experimentou a marca Natureza?", tag: "dica", likes: 24, comments: 8, liked: false, image: null },
   { id: 2, author: "Carlos Lima", avatar: "🦁", time: "4h", content: "Hoje visitei o restaurante Raizes em SP e simplesmente incrivel! O strogonoff de palmito e de outro mundo. Super recomendo para quem esta levando amigos nao-veganos!", tag: "experiencia", likes: 45, comments: 12, liked: true, image: null },
@@ -30,6 +27,8 @@ const MOCK_RECIPES = [
 ];
 
 const MOCK_PLACES = [
+  { id: 9, name: "Mont Zion Vegan", type: "100% Vegano", category: "restaurante", rating: 0, reviews: 0, address: "Rua Caio Graco, 393 - Vila Romana, São Paulo - SP", query: ["Rua Caio Graco, 393, Vila Romana, São Paulo, SP, Brasil", "Rua Caio Graco, Vila Romana, São Paulo, SP, Brasil"], hours: "Terça a sábado, das 10h às 17h", lat: null, lng: null, icon: "🍽️", badge: "vegan", real: true },
+  { id: 10, name: "Amarama Vegan", type: "100% Vegano", category: "confeitaria", rating: 0, reviews: 0, address: "Rua Caio Graco, 745 - Vila Romana, São Paulo - SP", query: ["Rua Caio Graco, 745, Vila Romana, São Paulo, SP, Brasil", "Rua Caio Graco, Vila Romana, São Paulo, SP, Brasil"], hours: "", lat: null, lng: null, icon: "🥐", badge: "vegan", real: true, description: "Confeitaria vegana: refeições, pizzas, pães, doces e tortas." },
   { id: 1, name: "Raizes Restaurante", type: "100% Vegano", category: "restaurante", rating: 4.9, reviews: 120, address: "R. Augusta, 500 - SP", lat: -23.5505, lng: -46.6512, icon: "🍽️", badge: "vegan" },
   { id: 2, name: "Sorveteria Verde", type: "100% Vegano", category: "sorveteria", rating: 4.7, reviews: 85, address: "Av. Paulista, 1000 - SP", lat: -23.5629, lng: -46.6544, icon: "🍦", badge: "vegan" },
   { id: 3, name: "Padaria Flor", type: "Vegan Friendly", category: "padaria", rating: 4.3, reviews: 45, address: "R. Oscar Freire, 200 - SP", lat: -23.5615, lng: -46.6723, icon: "🥐", badge: "friendly" },
@@ -85,7 +84,6 @@ const MOCK_PROFILES = [
   { id: 6, name: "Bruno Alves", age: 33, avatar: "🌵", bio: "Engenheiro e pai de plantas. Adoro compartilhar dicas de jardinagem!", interests: ["Plantas", "Tecnologia", "Board Games"], type: "amizades" }
 ];
 
-// ----- Estado -----
 let state = {
   currentView: 'feed',
   darkMode: false,
@@ -107,16 +105,16 @@ let state = {
   osmMap: null,
   osmMarkers: [],
   googlePlacesLoaded: false,
-  isLoading: { feed: false, recipes: false, explore: false }
+  isLoading: { feed: false, recipes: false, explore: false },
+  deleteTargetId: null
 };
 
-// ----- LocalStorage -----
 function loadState() {
   try {
-    const saved = localStorage.getItem('elograin_state_v2');
+    const saved = localStorage.getItem('elograin_state_v3');
     if (saved) {
       const parsed = JSON.parse(saved);
-      state = { ...state, ...parsed };
+      state = Object.assign({}, state, parsed);
     }
   } catch (e) {}
   if (state.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
@@ -124,7 +122,7 @@ function loadState() {
 
 function saveState() {
   try {
-    localStorage.setItem('elograin_state_v2', JSON.stringify({
+    localStorage.setItem('elograin_state_v3', JSON.stringify({
       darkMode: state.darkMode,
       myRecipes: state.myRecipes,
       myReviews: state.myReviews,
@@ -135,61 +133,76 @@ function saveState() {
   } catch (e) {}
 }
 
-// ----- Toast -----
-function toast(msg) {
+function toast(msg, actionLabel, action) {
   const container = document.getElementById('toastContainer');
   const el = document.createElement('div');
   el.className = 'toast';
+  el.setAttribute('role', 'status');
   el.textContent = msg;
+  if (actionLabel) {
+    const b = document.createElement('button');
+    b.className = 'toast-action';
+    b.textContent = actionLabel;
+    b.onclick = function() { action(); el.remove(); };
+    el.appendChild(b);
+  }
   container.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  setTimeout(function() { el.remove(); }, actionLabel ? 5000 : 3000);
 }
+
+// Escapa HTML: texto digitado pelo usuário nunca pode virar código (evita XSS)
+function esc(s) { return String(s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+var TAG_LABEL = { dica: 'Dica', experiencia: 'Experiência', duvida: 'Dúvida' };
+function activeFeedTag() { var t = document.querySelector('#feedTags .tag.active'); return t ? t.dataset.tag : 'todos'; }
 
 // ===== SKELETON HELPERS =====
 function showSkeleton(view) {
   if (view === 'recipes') {
-    const sk = document.getElementById('recipesSkeleton');
-    const list = document.getElementById('recipesList');
+    var sk = document.getElementById('recipesSkeleton');
+    var list = document.getElementById('recipesList');
     if (sk) sk.classList.remove('hidden');
     if (list) list.classList.add('hidden');
     return;
   }
   if (view === 'explore') {
-    const sk = document.getElementById('exploreSkeleton');
-    const real = document.getElementById('exploreRealContent');
+    var sk = document.getElementById('exploreSkeleton');
+    var real = document.getElementById('exploreRealContent');
     if (sk) sk.classList.remove('hidden');
     if (real) real.classList.add('hidden');
     return;
   }
-  const sk = document.getElementById(view + 'Skeleton');
-  const content = document.getElementById(view + 'Posts');
+  var sk = document.getElementById(view + 'Skeleton');
+  var content = document.getElementById(view + 'Posts');
   if (sk) sk.classList.remove('hidden');
   if (content) content.classList.add('hidden');
 }
 
 function hideSkeleton(view) {
   if (view === 'recipes') {
-    const sk = document.getElementById('recipesSkeleton');
-    const list = document.getElementById('recipesList');
+    var sk = document.getElementById('recipesSkeleton');
+    var list = document.getElementById('recipesList');
     if (sk) sk.classList.add('hidden');
     if (list) list.classList.remove('hidden');
     return;
   }
   if (view === 'explore') {
-    const sk = document.getElementById('exploreSkeleton');
-    const real = document.getElementById('exploreRealContent');
+    var sk = document.getElementById('exploreSkeleton');
+    var real = document.getElementById('exploreRealContent');
     if (sk) sk.classList.add('hidden');
     if (real) real.classList.remove('hidden');
     return;
   }
-  const sk = document.getElementById(view + 'Skeleton');
-  const content = document.getElementById(view + 'Posts');
+  var sk = document.getElementById(view + 'Skeleton');
+  var content = document.getElementById(view + 'Posts');
   if (sk) sk.classList.add('hidden');
   if (content) content.classList.remove('hidden');
 }
 
+var loadedViews = {};
 function simulateLoading(view, callback, delay) {
-  delay = delay || 1400;
+  if (loadedViews[view]) { callback(); return; }   // já carregou antes: mostra na hora, sem skeleton
+  loadedViews[view] = true;
+  delay = delay || 450;
   showSkeleton(view);
   state.isLoading[view] = true;
   setTimeout(function() {
@@ -199,7 +212,256 @@ function simulateLoading(view, callback, delay) {
   }, delay);
 }
 
-// ----- Navigation -----
+// ===== SWIPE TO DELETE LOGIC =====
+var swipeState = {
+  isDragging: false,
+  startX: 0,
+  currentX: 0,
+  trackWidth: 0,
+  handleWidth: 48,
+  maxDrag: 0,
+  threshold: 0.85
+};
+
+function openSwipeModal(postId) {
+  state.deleteTargetId = postId;
+  var post = state.posts.find(function(p) { return p.id === postId; });
+  var title = post ? (post.content.substring(0, 50) + '...') : 'este post';
+  document.getElementById('swipePostTitle').textContent = 'Voce esta excluindo: "' + title + '". Esta acao nao pode ser desfeita.';
+  document.getElementById('swipeOverlay').classList.add('active');
+  resetSwipe();
+}
+
+function closeSwipeModal() {
+  document.getElementById('swipeOverlay').classList.remove('active');
+  state.deleteTargetId = null;
+  resetSwipe();
+}
+
+function resetSwipe() {
+  swipeState.isDragging = false;
+  var handle = document.getElementById('swipeHandle');
+  var progress = document.getElementById('swipeProgress');
+  var label = document.getElementById('swipeLabel');
+  var success = document.getElementById('swipeSuccess');
+  handle.style.left = '4px';
+  handle.style.transform = 'translateY(-50%)';
+  handle.classList.remove('completed');
+  progress.style.width = '0%';
+  progress.classList.remove('complete');
+  label.classList.remove('hidden');
+  success.classList.remove('active');
+}
+
+function initSwipeEvents() {
+  var track = document.getElementById('swipeTrack');
+  var handle = document.getElementById('swipeHandle');
+
+  function onStart(e) {
+    swipeState.isDragging = true;
+    swipeState.trackWidth = track.offsetWidth;
+    swipeState.maxDrag = swipeState.trackWidth - swipeState.handleWidth - 8;
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    swipeState.startX = clientX;
+    handle.style.transition = 'none';
+    document.getElementById('swipeProgress').style.transition = 'none';
+  }
+
+  function onMove(e) {
+    if (!swipeState.isDragging) return;
+    e.preventDefault();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var delta = clientX - swipeState.startX;
+    if (delta < 0) delta = 0;
+    if (delta > swipeState.maxDrag) delta = swipeState.maxDrag;
+    swipeState.currentX = delta;
+    var pct = (delta / swipeState.maxDrag) * 100;
+    handle.style.left = (4 + delta) + 'px';
+    document.getElementById('swipeProgress').style.width = pct + '%';
+
+    if (pct > 50) {
+      document.getElementById('swipeLabel').classList.add('hidden');
+    } else {
+      document.getElementById('swipeLabel').classList.remove('hidden');
+    }
+
+    if (pct >= swipeState.threshold * 100) {
+      handle.classList.add('completed');
+    } else {
+      handle.classList.remove('completed');
+    }
+  }
+
+  function onEnd(e) {
+    if (!swipeState.isDragging) return;
+    swipeState.isDragging = false;
+    var pct = (swipeState.currentX / swipeState.maxDrag) * 100;
+
+    if (pct >= swipeState.threshold * 100) {
+      // Confirmed!
+      handle.style.transition = 'left 0.2s ease';
+      document.getElementById('swipeProgress').style.transition = 'width 0.2s ease';
+      handle.style.left = (swipeState.maxDrag + 4) + 'px';
+      document.getElementById('swipeProgress').style.width = '100%';
+      document.getElementById('swipeProgress').classList.add('complete');
+      document.getElementById('swipeSuccess').classList.add('active');
+
+      setTimeout(function() {
+        confirmDelete();
+      }, 400);
+    } else {
+      // Reset
+      handle.style.transition = 'left 0.3s ease';
+      document.getElementById('swipeProgress').style.transition = 'width 0.3s ease';
+      resetSwipe();
+    }
+  }
+
+  handle.addEventListener('touchstart', onStart, { passive: false });
+  handle.addEventListener('mousedown', onStart);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('touchend', onEnd);
+  document.addEventListener('mouseup', onEnd);
+}
+
+function confirmDelete() {
+  if (state.deleteTargetId !== null) {
+    var idx = state.posts.findIndex(function(p) { return p.id === state.deleteTargetId; });
+    if (idx > -1) {
+      var removed = state.posts.splice(idx, 1)[0];
+      saveState();
+      toast('Post excluído', 'Desfazer', function() {
+        state.posts.splice(idx, 0, removed); saveState(); renderFeed(); renderProfile();
+      });
+      renderFeed();
+      renderProfile();
+    }
+    state.deleteTargetId = null;
+  }
+  closeSwipeModal();
+}
+
+// ===== GOOGLE MAPS + OSM =====
+async function fetchGooglePlacesVegan() {
+  if (!GOOGLE_API_KEY) return null;
+  try {
+    const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.types,places.editorialSummary'
+      },
+      body: JSON.stringify({ textQuery: "restaurante vegano Sao Paulo", languageCode: "pt-BR", maxResultCount: 10 })
+    });
+    if (!response.ok) throw new Error('API Error');
+    const data = await response.json();
+    if (data.places && data.places.length > 0) {
+      return data.places.map(function(p, idx) {
+        return {
+          id: 100 + idx,
+          name: (p.displayName && p.displayName.text) ? p.displayName.text : (p.displayName || 'Restaurante Vegano'),
+          type: (p.types && p.types.includes('vegan_restaurant')) ? "100% Vegano" : "Vegan Friendly",
+          category: "restaurante", rating: p.rating || 4.5, reviews: p.userRatingCount || 10,
+          address: p.formattedAddress || 'Sao Paulo, SP',
+          lat: (p.location && p.location.latitude) ? p.location.latitude : -23.5505,
+          lng: (p.location && p.location.longitude) ? p.location.longitude : -46.6512,
+          icon: "🍽️", badge: (p.types && p.types.includes('vegan_restaurant')) ? "vegan" : "friendly",
+          description: (p.editorialSummary && p.editorialSummary.text) ? p.editorialSummary.text : ''
+        };
+      });
+    }
+    return null;
+  } catch (err) { return null; }
+}
+
+async function loadPlacesWithGoogle() {
+  if (state.googlePlacesLoaded) return;
+  const googlePlaces = await fetchGooglePlacesVegan();
+  if (googlePlaces && googlePlaces.length > 0) {
+    state.places = googlePlaces.concat(MOCK_PLACES);
+    state.googlePlacesLoaded = true;
+    toast('Dados reais do Google Maps carregados!');
+  } else {
+    state.places = [...MOCK_PLACES];
+  }
+}
+
+// ----- Lugares reais: o endereço vira coordenada via OpenStreetMap (Nominatim), com cache -----
+function ratingLine(p) { return p.reviews ? '⭐ ' + p.rating + ' • ' + p.reviews + ' avaliações' : '⭐ Seja o primeiro a avaliar'; }
+function mapsQuery(p) { return p.query ? encodeURIComponent(p.address) : (p.lat + ',' + p.lng); }
+function geocodePlace(p) {
+  if (p.lat != null) return Promise.resolve();
+  var cache = {};
+  try { cache = JSON.parse(localStorage.getItem('elograin_geo') || '{}'); } catch (e) {}
+  if (cache[p.id]) { p.lat = cache[p.id][0]; p.lng = cache[p.id][1]; return Promise.resolve(); }
+  var queries = p.query.slice();
+  function next() {
+    if (!queries.length) return Promise.resolve();
+    return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=br&q=' + encodeURIComponent(queries.shift()))
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d && d[0]) {
+          p.lat = parseFloat(d[0].lat); p.lng = parseFloat(d[0].lon);
+          cache[p.id] = [p.lat, p.lng];
+          try { localStorage.setItem('elograin_geo', JSON.stringify(cache)); } catch (e) {}
+        } else return next();
+      })
+      .catch(function() {});
+  }
+  return next();
+}
+
+function initOSMMap() {
+  if (state.osmMap) { state.osmMap.invalidateSize(); return; }
+  var mapContainer = document.createElement('div');
+  mapContainer.id = 'osmMap';
+  mapContainer.style.cssText = 'width:100%;height:100%;border-radius:16px;';
+  var wrapper = document.createElement('div');
+  wrapper.className = 'map-container-osm';
+  wrapper.appendChild(mapContainer);
+  var realContent = document.getElementById('exploreRealContent');
+  if (!realContent) return;
+  realContent.insertBefore(wrapper, realContent.firstChild);
+  state.osmMap = L.map('osmMap', { zoomControl: false, attributionControl: false }).setView([-23.5505, -46.6512], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: 'OpenStreetMap' }).addTo(state.osmMap);
+  addMarkersToMap();
+}
+
+function addMarkersToMap() {
+  if (!state.osmMap) return;
+  Promise.all(state.places.map(geocodePlace)).then(drawMarkers);
+}
+
+function drawMarkers() {
+  if (!state.osmMap) return;
+  state.osmMarkers.forEach(function(m) { state.osmMap.removeLayer(m); });
+  state.osmMarkers = [];
+  state.places.forEach(function(place) {
+    if (place.lat == null) return;   // endereço não encontrado: continua na lista, sem pino
+    var color = place.badge === 'vegan' ? '#81B29A' : '#E07A5F';
+    var marker = L.circleMarker([place.lat, place.lng], {
+      radius: place.real ? 13 : 10, fillColor: color, color: '#fff', weight: place.real ? 3 : 2, opacity: 1, fillOpacity: 0.9
+    }).addTo(state.osmMap);
+    var popupContent = '<div style="font-family:Inter,sans-serif;min-width:180px">' +
+      '<div style="font-weight:800;font-size:1rem;margin-bottom:4px">' + place.icon + ' ' + place.name + '</div>' +
+      '<div style="font-size:0.8rem;color:#666;margin-bottom:4px">' + place.type + '</div>' +
+      '<div style="font-size:0.8rem;margin-bottom:4px">' + ratingLine(place) + '</div>' + (place.hours ? '<div style="font-size:0.8rem;margin-bottom:4px">🕒 ' + place.hours + '</div>' : '') +
+      '<div style="font-size:0.75rem;color:#888">📍 ' + place.address + '</div>' +
+      (place.description ? '<div style="font-size:0.75rem;color:#666;margin-top:6px;font-style:italic">' + place.description + '</div>' : '') +
+      '</div>';
+    marker.bindPopup(popupContent);
+    marker.on('click', function() { showPlaceDetail(place.id); });
+    state.osmMarkers.push(marker);
+  });
+  if (state.osmMarkers.length > 0) {
+    var group = new L.featureGroup(state.osmMarkers);
+    state.osmMap.fitBounds(group.getBounds().pad(0.1));
+  }
+}
+
+// ===== NAVIGATION =====
 function showView(viewName) {
   state.currentView = viewName;
   document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
@@ -219,178 +481,131 @@ function renderCurrentView() {
   if (state.currentView === 'profile') renderProfile();
 }
 
-// ===== GOOGLE MAPS PLACES API INTEGRATION =====
-async function fetchGooglePlacesVegan() {
-  if (!GOOGLE_API_KEY) {
-    console.log('Google API Key nao configurada. Usando dados mockados.');
-    return null;
-  }
-  try {
-    const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.types,places.editorialSummary'
-      },
-      body: JSON.stringify({
-        textQuery: "restaurante vegano Sao Paulo",
-        languageCode: "pt-BR",
-        maxResultCount: 10
-      })
-    });
-    if (!response.ok) throw new Error('API Error');
-    const data = await response.json();
-    if (data.places && data.places.length > 0) {
-      return data.places.map(function(p, idx) {
-        return {
-          id: 100 + idx,
-          name: (p.displayName && p.displayName.text) ? p.displayName.text : (p.displayName || 'Restaurante Vegano'),
-          type: (p.types && p.types.includes('vegan_restaurant')) ? "100% Vegano" : "Vegan Friendly",
-          category: "restaurante",
-          rating: p.rating || 4.5,
-          reviews: p.userRatingCount || 10,
-          address: p.formattedAddress || 'Sao Paulo, SP',
-          lat: (p.location && p.location.latitude) ? p.location.latitude : -23.5505,
-          lng: (p.location && p.location.longitude) ? p.location.longitude : -46.6512,
-          icon: "🍽️",
-          badge: (p.types && p.types.includes('vegan_restaurant')) ? "vegan" : "friendly",
-          description: (p.editorialSummary && p.editorialSummary.text) ? p.editorialSummary.text : ''
-        };
-      });
-    }
-    return null;
-  } catch (err) {
-    console.log('Erro ao buscar Google Places:', err.message);
-    return null;
-  }
-}
-
-async function loadPlacesWithGoogle() {
-  if (state.googlePlacesLoaded) return;
-  const googlePlaces = await fetchGooglePlacesVegan();
-  if (googlePlaces && googlePlaces.length > 0) {
-    state.places = googlePlaces.concat(MOCK_PLACES);
-    state.googlePlacesLoaded = true;
-    toast('Dados reais do Google Maps carregados!');
-  } else {
-    state.places = [...MOCK_PLACES];
-  }
-}
-
-// ===== OPENSTREETMAP (LEAFLET) =====
-function initOSMMap() {
-  if (state.osmMap) {
-    state.osmMap.invalidateSize();
-    return;
-  }
-  const mapContainer = document.createElement('div');
-  mapContainer.id = 'osmMap';
-  mapContainer.style.cssText = 'width:100%;height:100%;border-radius:16px;';
-  const wrapper = document.createElement('div');
-  wrapper.className = 'map-container-osm';
-  wrapper.appendChild(mapContainer);
-  const realContent = document.getElementById('exploreRealContent');
-  if (!realContent) return;
-  realContent.insertBefore(wrapper, realContent.firstChild);
-
-  state.osmMap = L.map('osmMap', { zoomControl: false, attributionControl: false }).setView([-23.5505, -46.6512], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: 'OpenStreetMap' }).addTo(state.osmMap);
-  addMarkersToMap();
-}
-
-function addMarkersToMap() {
-  if (!state.osmMap) return;
-  state.osmMarkers.forEach(function(m) { state.osmMap.removeLayer(m); });
-  state.osmMarkers = [];
-  state.places.forEach(function(place) {
-    const color = place.badge === 'vegan' ? '#81B29A' : '#E07A5F';
-    const marker = L.circleMarker([place.lat, place.lng], {
-      radius: 10, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
-    }).addTo(state.osmMap);
-    const popupContent = '<div style="font-family:Inter,sans-serif;min-width:180px">' +
-      '<div style="font-weight:800;font-size:1rem;margin-bottom:4px">' + place.icon + ' ' + place.name + '</div>' +
-      '<div style="font-size:0.8rem;color:#666;margin-bottom:4px">' + place.type + '</div>' +
-      '<div style="font-size:0.8rem;margin-bottom:4px">⭐ ' + place.rating + ' (' + place.reviews + ' avaliacoes)</div>' +
-      '<div style="font-size:0.75rem;color:#888">📍 ' + place.address + '</div>' +
-      (place.description ? '<div style="font-size:0.75rem;color:#666;margin-top:6px;font-style:italic">' + place.description + '</div>' : '') +
-      '</div>';
-    marker.bindPopup(popupContent);
-    marker.on('click', function() { showPlaceDetail(place.id); });
-    state.osmMarkers.push(marker);
-  });
-  if (state.osmMarkers.length > 0) {
-    const group = new L.featureGroup(state.osmMarkers);
-    state.osmMap.fitBounds(group.getBounds().pad(0.1));
-  }
-}
-
-// ----- Feed -----
+// ===== FEED =====
 function renderFeed(filterTag) {
-  filterTag = filterTag || 'todos';
-  const container = document.getElementById('feedPosts');
-  const search = (document.getElementById('feedSearch') && document.getElementById('feedSearch').value) ? document.getElementById('feedSearch').value.toLowerCase() : '';
-  let posts = state.posts;
+  filterTag = filterTag || activeFeedTag();   // a busca respeita o filtro ativo
+  var container = document.getElementById('feedPosts');
+  var searchEl = document.getElementById('feedSearch');
+  var search = searchEl ? searchEl.value.toLowerCase() : '';
+  var posts = state.posts;
   if (filterTag !== 'todos') posts = posts.filter(function(p) { return p.tag === filterTag; });
   if (search) posts = posts.filter(function(p) { return p.content.toLowerCase().includes(search) || p.author.toLowerCase().includes(search); });
+
   container.innerHTML = posts.map(function(post) {
     var badgeClass = post.tag === 'dica' ? 'vegan' : (post.tag === 'experiencia' ? 'friendly' : 'econ');
+    var mine = post.author === state.user.name;   // só o autor pode excluir
+    var menu = mine
+      ? '<button role="menuitem" onclick="copyPost(' + post.id + ')">📋 Copiar texto</button><button role="menuitem" class="danger" onclick="closePostMenus();openSwipeModal(' + post.id + ')">🗑️ Excluir post</button>'
+      : '<button role="menuitem" onclick="closePostMenus();toast(\'Post salvo! 🔖\')">🔖 Salvar post</button><button role="menuitem" onclick="copyPost(' + post.id + ')">📋 Copiar texto</button><button role="menuitem" class="danger" onclick="closePostMenus();toast(\'Obrigado! Vamos analisar o post.\')">🚩 Denunciar</button>';
     return '<article class="card" data-id="' + post.id + '">' +
-      '<div class="card-header"><div class="avatar">' + post.avatar + '</div>' +
-      '<div class="card-meta"><div class="name">' + post.author + '</div>' +
-      '<div class="time">' + post.time + ' • <span class="badge badge-' + badgeClass + '">' + post.tag + '</span></div></div></div>' +
-      '<p class="card-text">' + post.content + '</p>' +
+      '<button class="more-btn" onclick="togglePostMenu(' + post.id + ',event)" aria-label="Mais opções" aria-haspopup="menu">⋯</button>' +
+      '<div class="post-menu" id="pm-' + post.id + '" role="menu">' + menu + '</div>' +
+      '<div class="card-header"><div class="avatar">' + esc(post.avatar) + '</div>' +
+      '<div class="card-meta"><div class="name">' + esc(post.author) + '</div>' +
+      '<div class="time">' + esc(post.time) + ' • <span class="badge badge-' + badgeClass + '">' + (TAG_LABEL[post.tag] || esc(post.tag)) + '</span></div></div></div>' +
+      '<p class="card-text">' + esc(post.content) + '</p>' +
       '<div class="card-actions">' +
-      '<button class="action-btn ' + (post.liked ? 'liked' : '') + '" onclick="toggleLike(' + post.id + ')">' +
-      '<span>' + (post.liked ? '❤️' : '🤍') + '</span> ' + post.likes + '</button>' +
-      '<button class="action-btn" onclick="showComments(' + post.id + ')"><span>💬</span> ' + post.comments + '</button>' +
+      '<button class="action-btn heart-btn ' + (post.liked ? 'liked' : '') + '" data-post="' + post.id + '" onclick="toggleLike(' + post.id + ')" aria-label="Curtir" aria-pressed="' + !!post.liked + '">' +
+      Elo.heartHTML('p' + post.id, post.liked) + '<span class="cnt">' + post.likes + '</span></button>' +
+      '<button class="action-btn cmt-btn" data-post="' + post.id + '" onclick="showComments(' + post.id + ')" aria-label="Comentários"><span>💬</span> <span class="cc">' + post.comments + '</span></button>' +
       '<button class="action-btn" onclick="sharePost(' + post.id + ')"><span>🔗</span> Compartilhar</button>' +
       '</div></article>';
   }).join('');
   if (posts.length === 0) container.innerHTML = emptyState('Nenhum post encontrado', '🔍');
 }
 
+function togglePostMenu(id, e) {
+  e.stopPropagation();
+  var m = document.getElementById('pm-' + id), wasOpen = m.classList.contains('open');
+  closePostMenus();
+  if (!wasOpen) m.classList.add('open');
+}
+function closePostMenus() { document.querySelectorAll('.post-menu.open').forEach(function(m) { m.classList.remove('open'); }); }
+function findPost(id) { return state.posts.find(function(p) { return p.id === id; }); }
+function copyPost(id) {
+  var p = findPost(id); closePostMenus();
+  if (p && navigator.clipboard) navigator.clipboard.writeText(p.content).then(function() { toast('Texto copiado!'); });
+}
+
 function toggleLike(postId) {
-  const post = state.posts.find(function(p) { return p.id === postId; });
+  var post = findPost(postId);
   if (post) {
     post.liked = !post.liked;
     post.likes += post.liked ? 1 : -1;
     saveState();
-    renderFeed();
+    // Não re-renderiza o feed: só anima o coração clicado (senão a animação seria interrompida)
+    var btn = document.querySelector('.heart-btn[data-post="' + postId + '"]');
+    if (btn) { btn.classList.toggle('liked', post.liked); btn.setAttribute('aria-pressed', post.liked); btn.querySelector('.cnt').textContent = post.likes; Elo.setHeart(btn, post.liked); }
+    else renderFeed();
   }
 }
 
+// Toque duplo no texto do post = curtir (como no Instagram/Facebook)
+function likeFromTap(id, card) {
+  var post = findPost(id);
+  if (post && !post.liked) toggleLike(id);
+  var h = document.createElement('div');
+  h.className = 'big-heart'; h.textContent = '❤️';
+  card.appendChild(h); setTimeout(function() { h.remove(); }, 800);
+  if (navigator.vibrate) navigator.vibrate(12);
+}
+
+function commentsHTML(post) {
+  var list = post.commentList || [];
+  if (!list.length) return '<p class="cmt-empty">Seja o primeiro a comentar 💬</p>';
+  return list.map(function(c) {
+    return '<div class="cmt-item"><div class="avatar avatar-sm">' + esc(c.avatar) + '</div><div class="cmt-bubble"><b>' + esc(c.author) + '</b><span>' + esc(c.text) + '</span></div></div>';
+  }).join('');
+}
+
 function showComments(postId) {
-  const post = state.posts.find(function(p) { return p.id === postId; });
+  var post = findPost(postId);
   if (!post) return;
-  openDetailModal('💬 Comentarios',
-    '<div class="card" style="margin-bottom:16px"><div class="card-header"><div class="avatar">' + post.avatar + '</div>' +
-    '<div class="card-meta"><div class="name">' + post.author + '</div><div class="time">' + post.time + '</div></div></div>' +
-    '<p class="card-text">' + post.content + '</p></div>' +
-    '<div style="display:flex;flex-direction:column;gap:12px">' +
-    '<div class="card" style="padding:12px"><div style="font-weight:700;font-size:0.85rem;margin-bottom:4px">🌱 Ana Verde</div>' +
-    '<div style="font-size:0.85rem;color:var(--text-light)">Amei essa dica! Vou testar hoje mesmo 😍</div></div>' +
-    '<div class="card" style="padding:12px"><div style="font-weight:700;font-size:0.85rem;margin-bottom:4px">🦁 Carlos Lima</div>' +
-    '<div style="font-size:0.85rem;color:var(--text-light)">Onde voce comprou? Nao acho em lugar nenhum!</div></div>' +
-    '<div class="card" style="padding:12px"><div style="font-weight:700;font-size:0.85rem;margin-bottom:4px">🦋 Mariana Souza</div>' +
-    '<div style="font-size:0.85rem;color:var(--text-light)">Salvando essa dica! Obrigada por compartilhar 🙏</div></div></div>',
-    '<button class="btn btn-primary" onclick="toast(\'Comentario adicionado!\')">💬 Comentar</button>');
+  openDetailModal('💬 Comentários',
+    '<div class="card" style="margin-bottom:16px"><div class="card-header"><div class="avatar">' + esc(post.avatar) + '</div>' +
+    '<div class="card-meta"><div class="name">' + esc(post.author) + '</div><div class="time">' + esc(post.time) + '</div></div></div>' +
+    '<p class="card-text">' + esc(post.content) + '</p></div>' +
+    '<div id="cmtList" class="cmt-list">' + commentsHTML(post) + '</div>',
+    '<form class="cmt-form" onsubmit="addComment(' + postId + ');return false">' +
+    '<input id="cmtInput" type="text" maxlength="300" placeholder="Escreva um comentário..." autocomplete="off" aria-label="Comentário">' +
+    '<button class="btn btn-primary" type="submit">Enviar</button></form>');
+  setTimeout(function() { var i = document.getElementById('cmtInput'); if (i) i.focus(); }, 150);
+}
+
+function addComment(postId) {
+  var post = findPost(postId), input = document.getElementById('cmtInput');
+  var text = input ? input.value.trim() : '';
+  if (!post || !text) return;
+  post.commentList = post.commentList || [];
+  post.commentList.push({ author: state.user.name, avatar: state.user.avatar, text: text });
+  post.comments++;
+  saveState();
+  input.value = '';
+  var list = document.getElementById('cmtList');
+  list.innerHTML = commentsHTML(post); list.scrollTop = list.scrollHeight;
+  var cc = document.querySelector('.cmt-btn[data-post="' + postId + '"] .cc');
+  if (cc) cc.textContent = post.comments;
 }
 
 function sharePost(postId) {
-  toast('Link copiado para a area de transferencia!');
+  var post = findPost(postId); if (!post) return;
+  var data = { title: 'Elograin', text: post.author + ': ' + post.content, url: location.origin };
+  if (navigator.share) { navigator.share(data).catch(function() {}); return; }
+  if (navigator.clipboard) navigator.clipboard.writeText(data.text + ' ' + data.url).then(function() { toast('Link copiado! 🔗'); }, function() { toast('Não foi possível copiar'); });
+  else toast('Compartilhar não é suportado neste navegador');
 }
 
-// ----- Recipes -----
+// ===== RECIPES =====
 function renderRecipes() {
-  const container = document.getElementById('recipesList');
-  const searchVal = document.getElementById('recipeSearch');
-  const search = searchVal ? searchVal.value.toLowerCase() : '';
-  const activeTabEl = document.querySelector('#recipeTabs .tab.active');
-  const activeTab = activeTabEl ? activeTabEl.dataset.tab : 'todas';
-  let recipes = state.recipes.concat(state.myRecipes);
+  var container = document.getElementById('recipesList');
+  var searchEl = document.getElementById('recipeSearch');
+  var search = searchEl ? searchEl.value.toLowerCase() : '';
+  var activeTabEl = document.querySelector('#recipeTabs .tab.active');
+  var activeTab = activeTabEl ? activeTabEl.dataset.tab : 'todas';
+  var recipes = state.recipes.concat(state.myRecipes);
   if (activeTab !== 'todas') recipes = recipes.filter(function(r) { return r.category === activeTab; });
   if (search) recipes = recipes.filter(function(r) { return r.title.toLowerCase().includes(search) || r.author.toLowerCase().includes(search); });
+
   container.innerHTML = recipes.map(function(r) {
     return '<article class="recipe-card" onclick="showRecipeDetail(' + r.id + ')">' +
       '<div class="recipe-thumb">' + (r.image || '🍽️') + '</div>' +
@@ -403,8 +618,8 @@ function renderRecipes() {
 }
 
 function showRecipeDetail(recipeId) {
-  const all = state.recipes.concat(state.myRecipes);
-  const r = all.find(function(x) { return x.id === recipeId; });
+  var all = state.recipes.concat(state.myRecipes);
+  var r = all.find(function(x) { return x.id === recipeId; });
   if (!r) return;
   openDetailModal(r.title,
     '<div style="text-align:center;font-size:4rem;margin-bottom:12px">' + r.image + '</div>' +
@@ -416,20 +631,23 @@ function showRecipeDetail(recipeId) {
     '<ul style="padding-left:20px;color:var(--text-light);font-size:0.9rem;line-height:1.8">' + r.ingredients.map(function(i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div>' +
     '<div><label>Modo de Preparo</label>' +
     '<ol style="padding-left:20px;color:var(--text-light);font-size:0.9rem;line-height:1.8">' + r.steps.map(function(s) { return '<li>' + s + '</li>'; }).join('') + '</ol></div>' +
+    '<div style="margin-top:16px"><label>Sua avaliação</label><div id="rateBox"></div></div>' +
     '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">' +
     '<div style="font-size:0.85rem;color:var(--text-light)">Por ' + r.author + '</div></div>',
-    '<button class="btn btn-primary" onclick="rateRecipe(' + r.id + ')">⭐ Avaliar</button>' +
     '<button class="btn btn-secondary" onclick="toast(\'Salvo nos favoritos!\')">💾 Salvar</button>');
+  Elo.mountRating(document.getElementById('rateBox'), { noun: 'Receita', onConfirm: function(score) { rateRecipe(r.id, score); } });
 }
 
-function rateRecipe(id) {
-  toast('Obrigado pela avaliacao! ⭐');
-  closeDetailModal();
+function rateRecipe(id, score) {
+  // Atualiza a média da receita (o modal continua aberto para a animação terminar)
+  var r = (state.recipes || RECIPES_DATA()).find(function(x) { return x.id === id; });
+  if (r && score) { r.rating = Math.round(((r.rating * r.reviews + score) / (r.reviews + 1)) * 10) / 10; r.reviews++; saveState(); }
 }
+function RECIPES_DATA() { return typeof MOCK_RECIPES !== 'undefined' ? MOCK_RECIPES : []; }
 
-// ----- Explore (Map + Events + Reviews) -----
+// ===== EXPLORE =====
 function renderExplore() {
-  const content = document.getElementById('exploreRealContent');
+  var content = document.getElementById('exploreRealContent');
   if (state.exploreTab === 'mapa') renderMap(content);
   else if (state.exploreTab === 'eventos') renderEvents(content);
   else if (state.exploreTab === 'avaliacoes') renderReviews(content);
@@ -447,7 +665,7 @@ function renderMap(container) {
           '<div class="place-img">' + p.icon + '</div>' +
           '<div class="place-info"><h4>' + p.name + '</h4>' +
           '<div class="place-type"><span class="badge badge-' + (p.badge === 'vegan' ? 'vegan' : 'friendly') + '">' + p.type + '</span></div>' +
-          '<div class="rating">⭐ ' + p.rating + ' • ' + p.reviews + ' avaliacoes</div>' +
+          '<div class="rating">' + ratingLine(p) + '</div>' + (p.hours ? '<div style="font-size:0.8rem;color:var(--text-light);margin-top:2px">🕒 ' + p.hours + '</div>' : '') +
           '<div style="font-size:0.8rem;color:var(--text-light);margin-top:2px">📍 ' + p.address + '</div>' +
           (p.description ? '<div style="font-size:0.75rem;color:var(--text-light);margin-top:4px;font-style:italic">' + p.description + '</div>' : '') +
           '</div></div>';
@@ -458,10 +676,7 @@ function renderMap(container) {
 
 function promptApiKey() {
   var key = prompt('Insira sua Google Places API Key (New):\n\n1. Acesse console.cloud.google.com\n2. Crie um projeto e ative "Places API (New)"\n3. Gere uma API Key\n4. Cole aqui:');
-  if (key) {
-    localStorage.setItem('elograin_google_api_key', key);
-    location.reload();
-  }
+  if (key) { localStorage.setItem('elograin_google_api_key', key); location.reload(); }
 }
 
 function showPlaceDetail(placeId) {
@@ -471,15 +686,15 @@ function showPlaceDetail(placeId) {
   openDetailModal(p.name,
     '<div style="text-align:center;font-size:4rem;margin-bottom:12px">' + p.icon + '</div>' +
     '<div style="text-align:center;margin-bottom:16px"><span class="badge badge-' + (p.badge === 'vegan' ? 'vegan' : 'friendly') + '">' + p.type + '</span></div>' +
-    '<div class="rating" style="justify-content:center;margin-bottom:12px;font-size:1.1rem">⭐ ' + p.rating + ' <span style="color:var(--text-light);font-size:0.85rem">(' + p.reviews + ' avaliacoes)</span></div>' +
+    '<div class="rating" style="justify-content:center;margin-bottom:12px;font-size:1.1rem">' + ratingLine(p) + '</div>' + (p.hours ? '<div style="text-align:center;margin-bottom:8px;font-size:0.9rem">🕒 ' + p.hours + '</div>' : '') +
     '<div style="text-align:center;color:var(--text-light);margin-bottom:16px">📍 ' + p.address + '</div>' + descBlock +
     '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap">' +
     '<span class="tag">🍽️ Restaurante</span><span class="tag">♿ Acessivel</span><span class="tag">💳 Cartao</span></div>' +
     '<div style="background:var(--cream);padding:12px;border-radius:12px">' +
     '<div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">📍 Coordenadas</div>' +
-    '<div style="font-size:0.8rem;color:var(--text-light);font-family:monospace">Lat: ' + p.lat.toFixed(6) + ' | Lng: ' + p.lng.toFixed(6) + '</div></div>',
+    '<div style="font-size:0.8rem;color:var(--text-light);font-family:monospace">Lat: ' + (p.lat != null ? p.lat.toFixed(6) : '—') + ' | Lng: ' + (p.lng != null ? p.lng.toFixed(6) : '—') + '</div></div>',
     '<button class="btn btn-primary" onclick="openReviewModal(\'' + p.name.replace(/'/g, "\\'") + '\')">⭐ Avaliar</button>' +
-    '<button class="btn btn-secondary" onclick="window.open(\'https://www.google.com/maps/search/?api=1&query=' + p.lat + ',' + p.lng + '\', \'_blank\')">🗺️ Abrir no Maps</button>');
+    '<button class="btn btn-secondary" onclick="window.open(\'https://www.google.com/maps/search/?api=1&query=' + mapsQuery(p) + '\', \'_blank\')">🗺️ Abrir no Maps</button>');
 }
 
 function renderEvents(container) {
@@ -520,7 +735,7 @@ function renderReviews(container) {
     }).join('');
 }
 
-// ----- Consume -----
+// ===== CONSUME =====
 function renderConsume() {
   var content = document.getElementById('consumeContent');
   if (state.consumeTab === 'mercado') renderMarket(content);
@@ -559,7 +774,7 @@ function filterProducts(query, type) {
   if (filtered.length === 0) container.innerHTML = emptyState('Nenhum produto encontrado', '🔍');
 }
 
-// ----- Connect -----
+// ===== CONNECT =====
 function renderConnect() {
   var content = document.getElementById('connectContent');
   if (state.connectTab === 'encontros') renderDating(content);
@@ -586,7 +801,7 @@ function matchCard(p) {
     '<button class="match-btn match-btn-primary" onclick="toast(\'Match! 💕 Inicie uma conversa.\')">💕 Curtir</button></div></div>';
 }
 
-// ----- Profile -----
+// ===== PROFILE =====
 function renderProfile() {
   document.getElementById('profileName').textContent = state.user.name;
   document.getElementById('profileAvatar').textContent = state.user.avatar;
@@ -617,7 +832,7 @@ function renderProfile() {
   }
 }
 
-// ----- Modal System -----
+// ===== MODALS =====
 function openDetailModal(title, body, footer) {
   footer = footer || '';
   document.getElementById('detailTitle').textContent = title;
@@ -656,9 +871,10 @@ function renderCreateForm() {
       '<button class="btn btn-primary w-full" onclick="submitRecipe()">Publicar Receita</button>';
   } else if (state.createType === 'review') {
     form.innerHTML = '<label>Estabelecimento</label><input type="text" id="reviewPlace" placeholder="Nome do restaurante/lugar">' +
-      '<label>Nota</label><select id="reviewRating"><option value="5">⭐⭐⭐⭐⭐ (5)</option><option value="4">⭐⭐⭐⭐ (4)</option><option value="3">⭐⭐⭐ (3)</option><option value="2">⭐⭐ (2)</option><option value="1">⭐ (1)</option></select>' +
+      '<label>Nota</label><div id="reviewStars"></div><input type="hidden" id="reviewRating" value="5">' +
       '<label>Sua Experiencia</label><textarea id="reviewText" placeholder="Conte como foi sua visita..."></textarea>' +
       '<button class="btn btn-primary w-full" onclick="submitReview()">Publicar Avaliacao</button>';
+    Elo.mountRating(document.getElementById('reviewStars'), { initial: 5, confirm: false, onChange: function(v) { document.getElementById('reviewRating').value = v; } });
   }
 }
 
@@ -721,16 +937,14 @@ function emptyState(text, icon) {
   return '<div class="empty-state"><div class="empty-icon">' + icon + '</div><h3>' + text + '</h3><p style="font-size:0.85rem">Nada por aqui ainda. Seja o primeiro!</p></div>';
 }
 
-// ----- Event Listeners -----
+// ===== EVENT LISTENERS =====
 document.addEventListener('DOMContentLoaded', function() {
   loadState();
 
-  // Bottom nav
   document.querySelectorAll('.nav-item').forEach(function(btn) {
     btn.addEventListener('click', function() { showView(btn.dataset.view); });
   });
 
-  // FAB
   document.getElementById('fabBtn').addEventListener('click', function() {
     if (state.currentView === 'explore') state.createType = 'review';
     else if (state.currentView === 'recipes') state.createType = 'recipe';
@@ -738,7 +952,6 @@ document.addEventListener('DOMContentLoaded', function() {
     openCreateModal();
   });
 
-  // Close modals
   document.getElementById('closeCreateModal').addEventListener('click', closeCreateModal);
   document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
   document.getElementById('createModal').addEventListener('click', function(e) {
@@ -748,7 +961,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (e.target === document.getElementById('detailModal')) closeDetailModal();
   });
 
-  // Create tabs
   document.querySelectorAll('#createTabs .tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       document.querySelectorAll('#createTabs .tab').forEach(function(t) { t.classList.remove('active'); });
@@ -758,7 +970,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Explore tabs
   document.querySelectorAll('#exploreTabs .tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       document.querySelectorAll('#exploreTabs .tab').forEach(function(t) { t.classList.remove('active'); });
@@ -768,7 +979,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Consume tabs
   document.querySelectorAll('#consumeTabs .tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       document.querySelectorAll('#consumeTabs .tab').forEach(function(t) { t.classList.remove('active'); });
@@ -778,7 +988,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Connect tabs
   document.querySelectorAll('#connectTabs .tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       document.querySelectorAll('#connectTabs .tab').forEach(function(t) { t.classList.remove('active'); });
@@ -788,7 +997,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Feed tags
   document.querySelectorAll('#feedTags .tag').forEach(function(tag) {
     tag.addEventListener('click', function() {
       document.querySelectorAll('#feedTags .tag').forEach(function(t) { t.classList.remove('active'); });
@@ -797,7 +1005,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Recipe tabs
   document.querySelectorAll('#recipeTabs .tab').forEach(function(tab) {
     tab.addEventListener('click', function() {
       document.querySelectorAll('#recipeTabs .tab').forEach(function(t) { t.classList.remove('active'); });
@@ -806,13 +1013,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Search inputs
   var feedSearch = document.getElementById('feedSearch');
-  if (feedSearch) feedSearch.addEventListener('input', function() { renderFeed(); });
+  var feedTimer;
+  if (feedSearch) feedSearch.addEventListener('input', function() { clearTimeout(feedTimer); feedTimer = setTimeout(function() { renderFeed(); }, 150); });
+  document.addEventListener('click', closePostMenus);
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closePostMenus(); closeDetailModal(); closeCreateModal(); } });
+  var lastTap = { id: 0, t: 0 };
+  document.getElementById('feedPosts').addEventListener('pointerup', function(e) {
+    var txt = e.target.closest('.card-text'); if (!txt) return;
+    var card = txt.closest('.card'), id = +card.dataset.id, now = Date.now();
+    if (lastTap.id === id && now - lastTap.t < 320) { likeFromTap(id, card); lastTap = { id: 0, t: 0 }; }
+    else lastTap = { id: id, t: now };
+  });
+
   var recipeSearch = document.getElementById('recipeSearch');
   if (recipeSearch) recipeSearch.addEventListener('input', function() { renderRecipes(); });
 
-  // Theme toggle
   var themeToggle = document.getElementById('themeToggle');
   themeToggle.addEventListener('click', function() {
     state.darkMode = !state.darkMode;
@@ -823,16 +1039,14 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   themeToggle.textContent = state.darkMode ? '☀️' : '🌙';
 
-  // Notifications
   document.getElementById('notifBtn').addEventListener('click', function() {
-    toast('🔔 Voce tem 3 notificacoes novas!');
+    toast('🔔 Você tem 3 notificações novas!');
   });
 
-  // Register SW
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function() {});
   }
 
-  // Initial render
+  initSwipeEvents();
   renderCurrentView();
 });

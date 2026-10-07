@@ -3,6 +3,8 @@
   --primary-dark: #143d31;
   --secondary: #E07A5F;
   --secondary-light: #e8957d;
+  --danger: #c0392b;
+  --danger-light: #e74c3c;
   --cream: #F4F1DE;
   --sprout: #81B29A;
   --text: #2D3142;
@@ -71,12 +73,7 @@ h1, h2, h3, h4, .font-display {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--skeleton-highlight) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, var(--skeleton-highlight) 50%, transparent 100%);
   animation: skeletonShimmer 1.4s ease-in-out infinite;
   transform: translateX(-100%);
 }
@@ -163,6 +160,204 @@ h1, h2, h3, h4, .font-display {
   flex-shrink: 0;
 }
 
+/* ===== DELETE BUTTON (always visible) ===== */
+.delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 64px;
+  height: 32px;
+  border-radius: 16px;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.35);
+  letter-spacing: 0.02em;
+}
+
+.delete-btn::before {
+  content: '🗑️';
+  font-size: 0.9rem;
+}
+
+.delete-btn:active {
+  background: var(--danger-light);
+  transform: scale(0.92);
+  box-shadow: 0 1px 4px rgba(192, 57, 43, 0.25);
+}
+
+/* ===== SWIPE TO DELETE CONFIRMATION ===== */
+.swipe-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 2500;
+  display: none;
+  place-items: center;
+  padding: 16px;
+  backdrop-filter: blur(6px);
+}
+
+.swipe-overlay.active { display: grid; }
+
+.swipe-modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  padding: 24px 20px 20px;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.3s ease;
+  text-align: center;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(40px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.swipe-modal .warning-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.swipe-modal h3 {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.swipe-modal p {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 20px;
+}
+
+/* Swipe Track */
+.swipe-track {
+  position: relative;
+  width: 100%;
+  height: 56px;
+  background: var(--cream);
+  border-radius: 28px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  user-select: none;
+  touch-action: none;
+}
+
+.swipe-track-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.swipe-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-light);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: opacity 0.2s;
+}
+
+.swipe-label.hidden { opacity: 0; }
+
+/* Progress fill behind handle */
+.swipe-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, var(--danger-light), var(--danger));
+  border-radius: 28px;
+  transition: width 0.1s linear;
+}
+
+.swipe-progress.complete {
+  width: 100% !important;
+  transition: width 0.3s ease;
+}
+
+/* Swipe Handle */
+.swipe-handle {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 1.4rem;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  box-shadow: 0 2px 12px rgba(192, 57, 43, 0.35);
+  z-index: 10;
+  transition: transform 0.1s, background 0.2s;
+  touch-action: none;
+}
+
+.swipe-handle:active {
+  cursor: grabbing;
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 4px 20px rgba(192, 57, 43, 0.5);
+}
+
+.swipe-handle.completed {
+  background: var(--sprout);
+  box-shadow: 0 2px 12px rgba(129, 178, 154, 0.5);
+}
+
+/* Success state */
+.swipe-success {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--sprout);
+  font-size: 1rem;
+}
+
+.swipe-success.active { display: flex; }
+
+/* Cancel button below swipe */
+.swipe-cancel {
+  margin-top: 16px;
+  padding: 12px;
+  width: 100%;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.swipe-cancel:active {
+  background: var(--cream);
+  transform: scale(0.97);
+}
+
 /* ===== HEADER ===== */
 .app-header {
   position: sticky;
@@ -215,7 +410,7 @@ h1, h2, h3, h4, .font-display {
 
 .icon-btn:active { transform: scale(0.92); background: var(--cream); }
 
-/* ===== BOTTOM NAV (Thumb-Friendly) ===== */
+/* ===== BOTTOM NAV ===== */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -328,12 +523,13 @@ h1, h2, h3, h4, .font-display {
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
   transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+  position: relative;
 }
 
-.card:active { transform: scale(0.98); }
 
 .card-header {
   display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  padding-right: 72px;
 }
 
 .avatar {
@@ -523,7 +719,7 @@ h1, h2, h3, h4, .font-display {
 .recipe-info h3 { font-size: 1rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .recipe-info .recipe-meta { font-size: 0.8rem; color: var(--text-light); }
 
-/* ===== MAP STYLES (OpenStreetMap + Leaflet) ===== */
+/* ===== MAP STYLES ===== */
 .map-container-osm {
   background: var(--cream);
   border-radius: var(--radius);
@@ -722,11 +918,6 @@ h1, h2, h3, h4, .font-display {
   animation: modalIn 0.3s ease;
 }
 
-@keyframes modalIn {
-  from { opacity: 0; transform: translateY(40px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 .modal-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
@@ -857,3 +1048,58 @@ label {
 .justify-between { justify-content: space-between; }
 .w-full { width: 100%; }
 .hidden { display: none !important; }
+
+/* ===== v4: Curtir animado + Avaliação com estrelas ===== */
+:root { --heart: #E63762; --star: #F2B531; }
+.heart-btn { align-items: center; }
+.heart-btn.liked { color: var(--heart); }
+.heart-wrap { position: relative; display: inline-flex; width: 24px; height: 24px; transform-origin: 50% 60%; }
+.heart { width: 100%; height: 100%; overflow: visible; }
+.h-ghost, .h-stroke { fill: none; stroke-width: 1.8; stroke-linejoin: round; }
+.h-ghost { stroke: var(--text-light); opacity: .55; }
+.h-stroke { stroke: var(--heart); stroke-width: 2; stroke-dasharray: 1; stroke-linecap: round; filter: drop-shadow(0 0 2px rgba(230,55,98,.55)); }
+.h-fill { fill: var(--heart); transform-origin: 12px 12.4px; }
+.h-ring { position: absolute; inset: 1px; border-radius: 50%; border: 2px solid var(--heart); opacity: 0; pointer-events: none; }
+.rate-box { text-align: center; }
+.stars-wrap { position: relative; padding: 6px 0; }
+.stars-row { display: flex; justify-content: center; gap: 6px; }
+.star-b { background: none; border: 0; padding: 4px; cursor: pointer; width: 46px; height: 46px; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.star-b svg { width: 100%; height: 100%; }
+.star-b path { fill: transparent; stroke: var(--text-light); stroke-width: 1.6; stroke-linejoin: round; transition: fill .2s, stroke .2s; }
+.star-b.on path { fill: var(--star); stroke: var(--star); }
+.star-b:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 10px; }
+.rate-box.locked .star-b { pointer-events: none; }
+.lottie-slot { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.lottie-slot svg { width: 100% !important; height: 100% !important; }
+.rate-confirm { margin-top: 10px; }
+.rate-confirm:disabled { opacity: .45; cursor: not-allowed; }
+.rate-result { min-height: 24px; margin-top: 10px; font-weight: 700; color: var(--primary); }
+@media (prefers-reduced-motion: reduce) { .star-b path { transition: none; } }
+
+/* ===== v5: menu do post, comentários, toque duplo, desfazer ===== */
+.delete-btn { display: none; }
+.more-btn { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border: 0; border-radius: 12px; background: transparent; color: var(--text-light); font-size: 1.4rem; line-height: 1; cursor: pointer; z-index: 5; transition: background .15s; }
+.more-btn:hover, .more-btn:active { background: var(--cream); }
+.post-menu { display: none; position: absolute; top: 52px; right: 10px; z-index: 6; min-width: 190px; padding: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); transform-origin: top right; }
+.post-menu.open { display: block; animation: menuIn .18s cubic-bezier(.34,1.56,.64,1); }
+.post-menu button { display: block; width: 100%; padding: 11px 12px; border: 0; background: none; border-radius: 9px; text-align: left; font: 600 .9rem 'Inter', sans-serif; color: var(--text); cursor: pointer; }
+.post-menu button:hover { background: var(--cream); }
+.post-menu .danger { color: var(--danger-light); }
+@keyframes menuIn { from { opacity: 0; transform: scale(.85); } }
+#feedPosts .card-text { -webkit-user-select: none; user-select: none; }
+.action-btn { min-height: 44px; }
+.big-heart { position: absolute; left: 50%; top: 45%; margin: -40px 0 0 -40px; font-size: 80px; line-height: 80px; pointer-events: none; z-index: 7; filter: drop-shadow(0 6px 18px rgba(255,59,92,.5)); animation: bigHeart .8s cubic-bezier(.34,1.56,.64,1) forwards; }
+@keyframes bigHeart { 0% { transform: scale(0); opacity: 0; } 30% { transform: scale(1.15); opacity: 1; } 60% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-24px); opacity: 0; } }
+.toast { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toast-action { border: 0; background: none; color: var(--sprout); font: 800 .9rem 'Inter', sans-serif; cursor: pointer; padding: 4px 6px; }
+.cmt-list { display: flex; flex-direction: column; gap: 10px; max-height: 40vh; overflow-y: auto; }
+.cmt-item { display: flex; gap: 10px; align-items: flex-start; }
+.avatar-sm { width: 32px; height: 32px; font-size: 1rem; flex-shrink: 0; }
+.cmt-bubble { background: var(--cream); border-radius: 16px; padding: 8px 12px; font-size: .9rem; display: flex; flex-direction: column; min-width: 0; word-break: break-word; }
+.cmt-bubble b { font-size: .8rem; }
+.cmt-bubble span { color: var(--text-light); }
+.cmt-empty { text-align: center; color: var(--text-light); padding: 18px 0; font-size: .9rem; }
+.cmt-form { display: flex; gap: 8px; width: 100%; }
+.cmt-form input { flex: 1; min-width: 0; border-radius: 999px; padding: 10px 14px; border: 1px solid var(--border); background: var(--cream); color: var(--text); font-size: 1rem; }
+:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .big-heart, .post-menu.open { animation-duration: .01ms; } }
