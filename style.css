@@ -1143,3 +1143,7 @@ label {
 .card-text.clamp { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 .more-link { display: block; margin: 6px 0 2px; padding: 6px 0; border: 0; background: none; color: var(--primary); font: 700 .9rem 'Inter', sans-serif; cursor: pointer; }
 [data-theme="dark"] .more-link { color: var(--sprout); }
+
+/* Aviso (toast) legível nos dois temas: antes era texto branco sobre fundo claro no modo escuro */
+.toast { color: var(--surface); }
+[data-theme="dark"] .toast-action { color: #1B4D3E; }

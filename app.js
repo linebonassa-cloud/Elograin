@@ -912,10 +912,14 @@ function submitPost() {
   var tag = document.getElementById('postTag').value;
   if (!content) { toast('Escreva algo antes de publicar!'); return; }
   if (sb && cloud.user) {
+    var pbtn = document.querySelector('#createForm .btn-primary');
+    if (pbtn) { pbtn.disabled = true; pbtn.textContent = 'Publicando...'; }
+    var reset = function() { if (pbtn) { pbtn.disabled = false; pbtn.textContent = 'Publicar'; } };
     sb.from('posts').insert({ tag: tag, content: content.slice(0, 5000) }).then(function(r) {
-      if (r.error) { toast('Não foi possível publicar. Tente de novo.'); return; }
+      reset();
+      if (r.error) { console.error('Erro ao publicar:', r.error); toast(publishError(r.error)); return; }
       closeCreateModal(); toast('Post publicado! 🎉'); loadPostsCloud();
-    });
+    }, function() { reset(); toast('Sem conexão com a internet. Tente de novo.'); });
     return;
   }
   var newPost = { id: Date.now(), author: state.user.name, avatar: state.user.avatar, time: "Agora", content: content, tag: tag, likes: 0, comments: 0, liked: false, image: null };
@@ -1251,6 +1255,14 @@ function loadPostsCloud() {
       saveState();
       if (postsSignature() !== before) { renderFeed(); renderProfile(); }   // só redesenha se algo mudou (não interrompe a animação do coração)
     });
+}
+
+function publishError(e) {
+  var m = ((e && e.message) || '').toLowerCase();
+  if (m.indexOf('check constraint') > -1 || m.indexOf('posts_content_check') > -1) return 'O banco ainda limita o post a 500 caracteres. Rode o SQL de atualização no Supabase.';
+  if (m.indexOf('foreign key') > -1) return 'Seu perfil não foi encontrado. Saia da conta e crie uma nova.';
+  if (m.indexOf('jwt') > -1 || m.indexOf('row-level') > -1 || m.indexOf('permission') > -1) return 'Sua sessão expirou. Saia e entre de novo.';
+  return 'Não foi possível publicar: ' + ((e && e.message) || 'tente de novo.');
 }
 
 function authMsg(err) {
