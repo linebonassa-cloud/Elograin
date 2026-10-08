@@ -1136,3 +1136,10 @@ label {
 .btn-logout:hover { background: var(--cream); }
 
 .card.nodel .more-btn, .card.nodel .post-menu { right: 10px; }
+
+/* ===== posts longos ===== */
+#feedPosts .card-text, .cmt-list + .card-text { white-space: pre-line; overflow-wrap: anywhere; }
+.card-text { white-space: pre-line; overflow-wrap: anywhere; }
+.card-text.clamp { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.more-link { display: block; margin: 6px 0 2px; padding: 6px 0; border: 0; background: none; color: var(--primary); font: 700 .9rem 'Inter', sans-serif; cursor: pointer; }
+[data-theme="dark"] .more-link { color: var(--sprout); }

@@ -509,7 +509,8 @@ function renderFeed(filterTag) {
       '<div class="card-header"><div class="avatar">' + esc(post.avatar) + '</div>' +
       '<div class="card-meta"><div class="name">' + esc(post.author) + '</div>' +
       '<div class="time">' + esc(post.time) + ' • <span class="badge badge-' + badgeClass + '">' + (TAG_LABEL[post.tag] || esc(post.tag)) + '</span></div></div></div>' +
-      '<p class="card-text">' + esc(post.content) + '</p>' +
+      '<p class="card-text' + (isLong(post.content) ? ' clamp' : '') + '">' + esc(post.content) + '</p>' +
+      (isLong(post.content) ? '<button class="more-link" onclick="toggleExpand(this)">Ver mais</button>' : '') +
       '<div class="card-actions">' +
       '<button class="action-btn heart-btn ' + (post.liked ? 'liked' : '') + '" data-post="' + post.id + '" onclick="toggleLike(' + post.id + ')" aria-label="Curtir" aria-pressed="' + !!post.liked + '">' +
       Elo.heartHTML('p' + post.id, post.liked) + '<span class="cnt">' + post.likes + '</span></button>' +
@@ -518,6 +519,21 @@ function renderFeed(filterTag) {
       '</div></article>';
   }).join('');
   if (posts.length === 0) container.innerHTML = state.posts.length ? emptyState('Nenhum post encontrado', '🔍') : emptyState('Ainda não há posts. Seja o primeiro a publicar! 🌱', '🌱');
+}
+
+// Post longo (ex.: receita colada): mostra só o começo e um botão "Ver mais"
+function isLong(t) { return t.length > 280 || t.split('\n').length > 6; }
+function toggleExpand(btn) {
+  var p = btn.previousElementSibling, open = p.classList.toggle('clamp');
+  btn.textContent = open ? 'Ver mais' : 'Ver menos';
+}
+function postHint(el) {
+  var h = document.getElementById('postHint'), n = el.value.length;
+  h.textContent = n > 600 ? '📖 Parece uma receita! Na aba "Receita" você separa ingredientes e modo de preparo. (' + n + '/5000)' : (n > 4000 ? n + '/5000' : '');
+}
+// Limpa texto colado da internet: caixinhas ▢ viram marcadores e linhas em branco demais são removidas
+function cleanPostText(t) {
+  return t.replace(/[\u25A2\u25A1\u2610\u2B1C]\s*/g, '• ').replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function togglePostMenu(id, e) {
@@ -870,7 +886,7 @@ function renderCreateForm() {
   var form = document.getElementById('createForm');
   if (state.createType === 'post') {
     form.innerHTML = '<label>O que voce quer compartilhar?</label>' +
-      '<textarea id="postContent" placeholder="Conte sua experiencia, dica ou duvida..."></textarea>' +
+      '<textarea id="postContent" maxlength="5000" placeholder="Conte sua experiência, dica ou dúvida..." oninput="postHint(this)"></textarea><small id="postHint" style="display:block;color:var(--text-light);margin-top:6px"></small>' +
       '<label>Categoria</label><select id="postTag"><option value="dica">💡 Dica</option><option value="experiencia">✨ Experiencia</option><option value="duvida">❓ Duvida</option></select>' +
       '<button class="btn btn-primary w-full" onclick="submitPost()">Publicar</button>';
   } else if (state.createType === 'recipe') {
@@ -891,11 +907,11 @@ function renderCreateForm() {
 }
 
 function submitPost() {
-  var content = document.getElementById('postContent').value.trim();
+  var content = cleanPostText(document.getElementById('postContent').value);
   var tag = document.getElementById('postTag').value;
   if (!content) { toast('Escreva algo antes de publicar!'); return; }
   if (sb && cloud.user) {
-    sb.from('posts').insert({ tag: tag, content: content.slice(0, 500) }).then(function(r) {
+    sb.from('posts').insert({ tag: tag, content: content.slice(0, 5000) }).then(function(r) {
       if (r.error) { toast('Não foi possível publicar. Tente de novo.'); return; }
       closeCreateModal(); toast('Post publicado! 🎉'); loadPostsCloud();
     });
