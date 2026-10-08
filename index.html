@@ -49,10 +49,34 @@
   </div>
 
   <!-- Header -->
+    <!-- LOGIN / CADASTRO -->
+  <div id="authScreen" class="auth" hidden>
+    <div class="auth-card">
+      <div class="auth-logo">🌿</div>
+      <h1>Elograin</h1>
+      <p class="auth-sub">A comunidade vegana que conecta você</p>
+      <div class="auth-tabs">
+        <button type="button" id="tabLogin" class="on" onclick="authMode('login')">Entrar</button>
+        <button type="button" id="tabSignup" onclick="authMode('signup')">Criar conta</button>
+      </div>
+      <form id="authForm" onsubmit="submitAuth(event)" novalidate>
+        <div class="field" id="fName" hidden><label for="aName">Nome</label><input id="aName" type="text" maxlength="30" autocomplete="name" placeholder="Como quer ser chamado(a)"></div>
+        <div class="field" id="fAvatar" hidden><label>Escolha seu avatar</label><div class="av-pick" id="avPick"></div></div>
+        <div class="field"><label for="aEmail">E-mail</label><input id="aEmail" type="email" inputmode="email" autocomplete="username" placeholder="voce@email.com"></div>
+        <div class="field"><label for="aPass">Senha</label>
+          <div class="pw"><input id="aPass" type="password" autocomplete="current-password" placeholder="Sua senha"><button type="button" id="pwToggle" aria-label="Mostrar senha" onclick="togglePw()">👁️</button></div>
+          <small id="pwHint" hidden>Mínimo de 8 caracteres</small></div>
+        <p id="authErr" class="auth-err" role="alert"></p>
+        <button class="btn btn-primary auth-submit" id="authBtn" type="submit">Entrar</button>
+      </form>
+      <p class="auth-note">🔒 Sua senha é protegida com criptografia e a conta fica salva neste aparelho.</p>
+    </div>
+  </div>
+
   <header class="app-header">
     <div class="logo">
       <div class="logo-icon">🌿</div>
-      <span>Elograin</span><small class="ver">v5.1</small>
+      <span>Elograin</span><small class="ver">v5.2</small>
     </div>
     <div class="header-actions">
       <button class="icon-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
@@ -227,6 +251,8 @@
         <div class="avatar avatar-lg" id="profileAvatar">🦁</div>
         <h2 id="profileName">Voce</h2>
         <p style="color: var(--text-light); font-size: 0.9rem;" id="profileBio">Membro da comunidade Elograin</p>
+        <p style="color: var(--text-light); font-size: 0.8rem;" id="profileEmail"></p>
+        <button class="btn-logout" onclick="logout()">Sair da conta</button>
         <div class="profile-stats">
           <div class="profile-stat"><div class="num" id="statPosts">0</div><div class="lbl">Posts</div></div>
           <div class="profile-stat"><div class="num" id="statRecipes">0</div><div class="lbl">Receitas</div></div>

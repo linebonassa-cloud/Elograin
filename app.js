@@ -804,6 +804,7 @@ function renderProfile() {
   document.getElementById('profileName').textContent = state.user.name;
   document.getElementById('profileAvatar').textContent = state.user.avatar;
   document.getElementById('profileBio').textContent = state.user.bio;
+  var pe = document.getElementById('profileEmail'); if (pe) pe.textContent = state.user.email || '';
   document.getElementById('statPosts').textContent = state.posts.filter(function(p) { return p.author === state.user.name; }).length;
   document.getElementById('statRecipes').textContent = state.myRecipes.length;
   document.getElementById('statLikes').textContent = state.posts.reduce(function(a, p) { return a + (p.author === state.user.name ? p.likes : 0); }, 0);
@@ -938,6 +939,7 @@ function emptyState(text, icon) {
 // ===== EVENT LISTENERS =====
 document.addEventListener('DOMContentLoaded', function() {
   loadState();
+  initAuth();
 
   document.querySelectorAll('.nav-item').forEach(function(btn) {
     btn.addEventListener('click', function() { showView(btn.dataset.view); });
@@ -1048,3 +1050,110 @@ document.addEventListener('DOMContentLoaded', function() {
   initSwipeEvents();
   renderCurrentView();
 });
+
+// ===== LOGIN / CADASTRO =====
+// Contas ficam neste aparelho (localStorage). A senha NUNCA é guardada: só um hash PBKDF2 com sal aleatório.
+// Para contas na nuvem (entrar de qualquer celular) é preciso um servidor, ex.: Supabase Auth.
+var AVATARS = ['🌱', '🦁', '🦋', '🐻', '🌸', '🌵', '🥑', '🐝'];
+var auth = { mode: 'login', avatar: '🌱', fails: 0, lockUntil: 0 };
+
+function getAccounts() { try { return JSON.parse(localStorage.getItem('elograin_accounts') || '{}'); } catch (e) { return {}; } }
+function setAccounts(a) { localStorage.setItem('elograin_accounts', JSON.stringify(a)); }
+function toB64(buf) { return btoa(String.fromCharCode.apply(null, new Uint8Array(buf))); }
+function hashPw(pw, saltB64) {
+  var salt = Uint8Array.from(atob(saltB64), function(c) { return c.charCodeAt(0); });
+  return crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits'])
+    .then(function(k) { return crypto.subtle.deriveBits({ name: 'PBKDF2', salt: salt, iterations: 150000, hash: 'SHA-256' }, k, 256); })
+    .then(toB64);
+}
+
+function authMode(mode) {
+  auth.mode = mode;
+  var signup = mode === 'signup';
+  document.getElementById('tabLogin').classList.toggle('on', !signup);
+  document.getElementById('tabSignup').classList.toggle('on', signup);
+  document.getElementById('fName').hidden = !signup;
+  document.getElementById('fAvatar').hidden = !signup;
+  document.getElementById('pwHint').hidden = !signup;
+  document.getElementById('authBtn').textContent = signup ? 'Criar conta' : 'Entrar';
+  document.getElementById('aPass').autocomplete = signup ? 'new-password' : 'current-password';
+  authError('');
+}
+function authError(msg) { document.getElementById('authErr').textContent = msg; }
+function togglePw() {
+  var i = document.getElementById('aPass'), show = i.type === 'password';
+  i.type = show ? 'text' : 'password';
+  document.getElementById('pwToggle').textContent = show ? '🙈' : '👁️';
+  document.getElementById('pwToggle').setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+}
+function pickAvatar(a) {
+  auth.avatar = a;
+  document.querySelectorAll('#avPick button').forEach(function(b) { b.classList.toggle('on', b.textContent === a); });
+}
+
+function submitAuth(e) {
+  e.preventDefault();
+  if (!window.crypto || !crypto.subtle) { authError('Este navegador não suporta login seguro. Abra o app em https.'); return; }
+  var wait = Math.ceil((auth.lockUntil - Date.now()) / 1000);
+  if (wait > 0) { authError('Muitas tentativas. Aguarde ' + wait + 's.'); return; }
+  var email = document.getElementById('aEmail').value.trim().toLowerCase();
+  var pass = document.getElementById('aPass').value;
+  var name = document.getElementById('aName').value.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { authError('Digite um e-mail válido.'); return; }
+  if (!pass) { authError('Digite sua senha.'); return; }
+  var accounts = getAccounts(), btn = document.getElementById('authBtn');
+  btn.disabled = true;
+
+  if (auth.mode === 'signup') {
+    if (name.length < 2) { authError('Digite seu nome (mínimo 2 letras).'); btn.disabled = false; return; }
+    if (pass.length < 8) { authError('A senha precisa ter no mínimo 8 caracteres.'); btn.disabled = false; return; }
+    if (accounts[email]) { authError('Este e-mail já tem conta. Toque em "Entrar".'); btn.disabled = false; return; }
+    var salt = toB64(crypto.getRandomValues(new Uint8Array(16)));
+    hashPw(pass, salt).then(function(h) {
+      accounts[email] = { name: name, avatar: auth.avatar, salt: salt, hash: h, created: Date.now() };
+      setAccounts(accounts); startSession(email, true);
+    }).catch(function() { authError('Não foi possível criar a conta.'); }).then(function() { btn.disabled = false; });
+  } else {
+    var acc = accounts[email];
+    // mesmo tempo de resposta e mesma mensagem para e-mail inexistente ou senha errada
+    hashPw(pass, acc ? acc.salt : toB64(new Uint8Array(16))).then(function(h) {
+      if (acc && h === acc.hash) { auth.fails = 0; startSession(email, false); }
+      else {
+        auth.fails++;
+        if (auth.fails >= 5) { auth.lockUntil = Date.now() + 30000; auth.fails = 0; authError('Muitas tentativas. Aguarde 30s.'); }
+        else authError('E-mail ou senha incorretos.');
+      }
+    }).catch(function() { authError('Não foi possível entrar.'); }).then(function() { btn.disabled = false; });
+  }
+}
+
+function startSession(email, isNew) {
+  var acc = getAccounts()[email];
+  if (!acc) return;
+  localStorage.setItem('elograin_session', email);
+  state.user = { name: acc.name, avatar: acc.avatar, bio: 'Membro da comunidade Elograin', email: email };
+  saveState();
+  document.getElementById('authScreen').hidden = true;
+  document.getElementById('authForm').reset();
+  authError('');
+  showView('feed');
+  renderProfile();
+  toast(isNew ? 'Bem-vindo(a) ao Elograin, ' + acc.name + '! 🌿' : 'Que bom te ver, ' + acc.name + '! 👋');
+}
+
+function logout() {
+  localStorage.removeItem('elograin_session');
+  closePostMenus();
+  authMode('login');
+  document.getElementById('authScreen').hidden = false;
+}
+
+function initAuth() {
+  var pick = document.getElementById('avPick');
+  pick.innerHTML = AVATARS.map(function(a) { return '<button type="button" onclick="pickAvatar(\'' + a + '\')" aria-label="Avatar ' + a + '">' + a + '</button>'; }).join('');
+  pickAvatar(auth.avatar);
+  var email = localStorage.getItem('elograin_session');
+  var acc = email && getAccounts()[email];
+  if (acc) { state.user = Object.assign({}, state.user, { name: acc.name, avatar: acc.avatar, email: email }); document.getElementById('authScreen').hidden = true; }
+  else document.getElementById('authScreen').hidden = false;
+}
