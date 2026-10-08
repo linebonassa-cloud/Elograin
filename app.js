@@ -332,13 +332,14 @@ function confirmDelete() {
       var removed = state.posts.splice(idx, 1)[0];
       var delTimer = null;
       if (sb && cloud.user && removed.user_id) {
+        pendingDel++;
         delTimer = setTimeout(function() {
-          sb.from('posts').delete().eq('id', removed.id).then(function(r) { if (r.error) { toast('Não foi possível excluir.'); loadPostsCloud(); } });
+          sb.from('posts').delete().eq('id', removed.id).then(function(r) { pendingDel--; if (r.error) toast('Não foi possível excluir.'); loadPostsCloud(); });
         }, 5200);
       }
       saveState();
       toast('Post excluído', 'Desfazer', function() {
-        clearTimeout(delTimer);
+        if (delTimer) { clearTimeout(delTimer); pendingDel--; }
         state.posts.splice(idx, 0, removed); saveState(); renderFeed(); renderProfile();
       });
       renderFeed();
@@ -1053,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var feedTimer;
   if (feedSearch) feedSearch.addEventListener('input', function() { clearTimeout(feedTimer); feedTimer = setTimeout(function() { renderFeed(); }, 150); });
   document.addEventListener('click', closePostMenus);
+  setInterval(function() { if (!document.hidden && sb && cloud.user) loadPostsCloud(); }, 15000);
   document.addEventListener('visibilitychange', function() { if (!document.hidden && sb && cloud.user) loadPostsCloud(); });
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closePostMenus(); closeDetailModal(); closeCreateModal(); } });
   var lastTap = { id: 0, t: 0 };
@@ -1212,6 +1214,8 @@ var SUPABASE_URL = 'https://lkbuejiqkjocmcdqcyxv.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_ecUzPh2z2oBWsOQm6HIC8g_nDOFPnqL';
 var sb = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 var cloud = { user: null };
+var pendingDel = 0;   // exclusões aguardando o fim do "Desfazer"
+function postsSignature() { return state.posts.map(function(p) { return p.id + ':' + p.likes + ':' + p.comments + ':' + (p.liked ? 1 : 0); }).join('|'); }
 
 function timeAgo(iso) {
   var s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -1236,14 +1240,16 @@ function mapPost(r) {
 }
 
 function loadPostsCloud() {
-  if (!sb || !cloud.user) return Promise.resolve();
+  if (!sb || !cloud.user || pendingDel > 0) return Promise.resolve();
   return sb.from('posts')
     .select('id,user_id,tag,content,created_at,profiles!posts_user_id_fkey(name,avatar),likes(user_id),comments(id,content,created_at,profiles!comments_user_id_fkey(name,avatar))')
     .order('created_at', { ascending: false }).limit(60)
     .then(function(r) {
       if (r.error) { toast('Não foi possível carregar o feed. Puxe para atualizar.'); return; }
+      var before = postsSignature();
       state.posts = r.data.map(mapPost);
-      saveState(); renderFeed(); renderProfile();
+      saveState();
+      if (postsSignature() !== before) { renderFeed(); renderProfile(); }   // só redesenha se algo mudou (não interrompe a animação do coração)
     });
 }
 
