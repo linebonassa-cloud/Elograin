@@ -330,8 +330,15 @@ function confirmDelete() {
     var idx = state.posts.findIndex(function(p) { return p.id === state.deleteTargetId; });
     if (idx > -1) {
       var removed = state.posts.splice(idx, 1)[0];
+      var delTimer = null;
+      if (sb && cloud.user && removed.user_id) {
+        delTimer = setTimeout(function() {
+          sb.from('posts').delete().eq('id', removed.id).then(function(r) { if (r.error) { toast('Não foi possível excluir.'); loadPostsCloud(); } });
+        }, 5200);
+      }
       saveState();
       toast('Post excluído', 'Desfazer', function() {
+        clearTimeout(delTimer);
         state.posts.splice(idx, 0, removed); saveState(); renderFeed(); renderProfile();
       });
       renderFeed();
@@ -494,8 +501,9 @@ function renderFeed(filterTag) {
   container.innerHTML = posts.map(function(post) {
     var badgeClass = post.tag === 'dica' ? 'vegan' : (post.tag === 'experiencia' ? 'friendly' : 'econ');
     var menu = '<button role="menuitem" onclick="closePostMenus();toast(\'Post salvo! 🔖\')">🔖 Salvar post</button><button role="menuitem" onclick="copyPost(' + post.id + ')">📋 Copiar texto</button><button role="menuitem" class="danger" onclick="closePostMenus();toast(\'Obrigado! Vamos analisar o post.\')">🚩 Denunciar</button>';
-    return '<article class="card" data-id="' + post.id + '">' +
-      '<button class="delete-btn" onclick="openSwipeModal(' + post.id + ')" aria-label="Excluir post">Excluir</button>' +
+    var canDel = !(post.user_id && cloud.user && post.user_id !== cloud.user.id);   // só o autor vê a lixeira
+    return '<article class="card' + (canDel ? '' : ' nodel') + '" data-id="' + post.id + '">' +
+      (canDel ? '<button class="delete-btn" onclick="openSwipeModal(' + post.id + ')" aria-label="Excluir post">Excluir</button>' : '') +
       '<button class="more-btn" onclick="togglePostMenu(' + post.id + ',event)" aria-label="Mais opções" aria-haspopup="menu">⋯</button>' +
       '<div class="post-menu" id="pm-' + post.id + '" role="menu">' + menu + '</div>' +
       '<div class="card-header"><div class="avatar">' + esc(post.avatar) + '</div>' +
@@ -509,7 +517,7 @@ function renderFeed(filterTag) {
       '<button class="action-btn" onclick="sharePost(' + post.id + ')"><span>🔗</span> Compartilhar</button>' +
       '</div></article>';
   }).join('');
-  if (posts.length === 0) container.innerHTML = emptyState('Nenhum post encontrado', '🔍');
+  if (posts.length === 0) container.innerHTML = state.posts.length ? emptyState('Nenhum post encontrado', '🔍') : emptyState('Ainda não há posts. Seja o primeiro a publicar! 🌱', '🌱');
 }
 
 function togglePostMenu(id, e) {
@@ -530,6 +538,10 @@ function toggleLike(postId) {
   if (post) {
     post.liked = !post.liked;
     post.likes += post.liked ? 1 : -1;
+    if (sb && cloud.user && post.user_id) {
+      var q = post.liked ? sb.from('likes').insert({ post_id: postId }) : sb.from('likes').delete().match({ post_id: postId, user_id: cloud.user.id });
+      q.then(function(r) { if (r.error) { post.liked = !post.liked; post.likes += post.liked ? 1 : -1; renderFeed(); toast('Não foi possível curtir. Tente de novo.'); } });
+    }
     saveState();
     // Não re-renderiza o feed: só anima o coração clicado (senão a animação seria interrompida)
     var btn = document.querySelector('.heart-btn[data-post="' + postId + '"]');
@@ -578,6 +590,7 @@ function addComment(postId) {
   post.commentList.push({ author: state.user.name, avatar: state.user.avatar, text: text });
   post.comments++;
   saveState();
+  if (sb && cloud.user && post.user_id) sb.from('comments').insert({ post_id: postId, content: text }).then(function(r) { if (r.error) toast('Comentário não foi salvo. Tente de novo.'); });
   input.value = '';
   var list = document.getElementById('cmtList');
   list.innerHTML = commentsHTML(post); list.scrollTop = list.scrollHeight;
@@ -881,6 +894,13 @@ function submitPost() {
   var content = document.getElementById('postContent').value.trim();
   var tag = document.getElementById('postTag').value;
   if (!content) { toast('Escreva algo antes de publicar!'); return; }
+  if (sb && cloud.user) {
+    sb.from('posts').insert({ tag: tag, content: content.slice(0, 500) }).then(function(r) {
+      if (r.error) { toast('Não foi possível publicar. Tente de novo.'); return; }
+      closeCreateModal(); toast('Post publicado! 🎉'); loadPostsCloud();
+    });
+    return;
+  }
   var newPost = { id: Date.now(), author: state.user.name, avatar: state.user.avatar, time: "Agora", content: content, tag: tag, likes: 0, comments: 0, liked: false, image: null };
   state.posts.unshift(newPost);
   saveState();
@@ -1017,6 +1037,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var feedTimer;
   if (feedSearch) feedSearch.addEventListener('input', function() { clearTimeout(feedTimer); feedTimer = setTimeout(function() { renderFeed(); }, 150); });
   document.addEventListener('click', closePostMenus);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden && sb && cloud.user) loadPostsCloud(); });
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closePostMenus(); closeDetailModal(); closeCreateModal(); } });
   var lastTap = { id: 0, t: 0 };
   document.getElementById('feedPosts').addEventListener('pointerup', function(e) {
@@ -1101,6 +1122,7 @@ function submitAuth(e) {
   var name = document.getElementById('aName').value.trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { authError('Digite um e-mail válido.'); return; }
   if (!pass) { authError('Digite sua senha.'); return; }
+  if (sb) { cloudAuth(email, pass, name); return; }
   var accounts = getAccounts(), btn = document.getElementById('authBtn');
   btn.disabled = true;
 
@@ -1142,6 +1164,7 @@ function startSession(email, isNew) {
 }
 
 function logout() {
+  if (sb) { sb.auth.signOut(); cloud.user = null; state.posts = []; saveState(); }
   localStorage.removeItem('elograin_session');
   closePostMenus();
   authMode('login');
@@ -1152,8 +1175,106 @@ function initAuth() {
   var pick = document.getElementById('avPick');
   pick.innerHTML = AVATARS.map(function(a) { return '<button type="button" onclick="pickAvatar(\'' + a + '\')" aria-label="Avatar ' + a + '">' + a + '</button>'; }).join('');
   pickAvatar(auth.avatar);
+  if (sb) {
+    document.getElementById('authScreen').hidden = false;
+    sb.auth.getSession().then(function(r) {
+      var ses = r.data && r.data.session;
+      if (ses) startCloudSession(ses.user, null);
+    }).catch(function() {});
+    return;
+  }
+  setTimeout(function() { toast('⚠️ Sem conexão com o servidor. Usando modo local.'); }, 800);
   var email = localStorage.getItem('elograin_session');
   var acc = email && getAccounts()[email];
   if (acc) { state.user = Object.assign({}, state.user, { name: acc.name, avatar: acc.avatar, email: email }); document.getElementById('authScreen').hidden = true; }
   else document.getElementById('authScreen').hidden = false;
+}
+
+// ===== NUVEM (Supabase): contas, posts, curtidas e comentários compartilhados =====
+// A chave "publishable" é pública por natureza. Quem protege os dados são as regras (RLS) criadas no banco.
+var SUPABASE_URL = 'https://lkbuejiqkjocmcdqcyxv.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_ecUzPh2z2oBWsOQm6HIC8g_nDOFPnqL';
+var sb = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+var cloud = { user: null };
+
+function timeAgo(iso) {
+  var s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return 'Agora';
+  var m = Math.floor(s / 60); if (m < 60) return m + 'min';
+  var h = Math.floor(m / 60); if (h < 24) return h + 'h';
+  return Math.floor(h / 24) + 'd';
+}
+
+function mapPost(r) {
+  var pr = r.profiles || {};
+  var cms = (r.comments || []).slice().sort(function(a, b) { return new Date(a.created_at) - new Date(b.created_at); });
+  return {
+    id: r.id, user_id: r.user_id, author: pr.name || 'Membro', avatar: pr.avatar || '🌱',
+    time: timeAgo(r.created_at), content: r.content, tag: r.tag,
+    likes: (r.likes || []).length,
+    liked: !!cloud.user && (r.likes || []).some(function(l) { return l.user_id === cloud.user.id; }),
+    comments: cms.length,
+    commentList: cms.map(function(c) { var p = c.profiles || {}; return { author: p.name || 'Membro', avatar: p.avatar || '🌱', text: c.content }; }),
+    image: null
+  };
+}
+
+function loadPostsCloud() {
+  if (!sb || !cloud.user) return Promise.resolve();
+  return sb.from('posts')
+    .select('id,user_id,tag,content,created_at,profiles!posts_user_id_fkey(name,avatar),likes(user_id),comments(id,content,created_at,profiles!comments_user_id_fkey(name,avatar))')
+    .order('created_at', { ascending: false }).limit(60)
+    .then(function(r) {
+      if (r.error) { toast('Não foi possível carregar o feed. Puxe para atualizar.'); return; }
+      state.posts = r.data.map(mapPost);
+      saveState(); renderFeed(); renderProfile();
+    });
+}
+
+function authMsg(err) {
+  var m = ((err && err.message) || '').toLowerCase();
+  if (m.indexOf('invalid login') > -1) return 'E-mail ou senha incorretos.';
+  if (m.indexOf('already registered') > -1) return 'Este e-mail já tem conta. Toque em "Entrar".';
+  if (m.indexOf('not confirmed') > -1) return 'Confirme seu e-mail antes de entrar.';
+  if (m.indexOf('rate limit') > -1 || m.indexOf('too many') > -1) return 'Muitas tentativas. Aguarde um pouco.';
+  if (m.indexOf('password') > -1) return 'Senha fraca. Use no mínimo 8 caracteres.';
+  return 'Não foi possível concluir. Tente de novo.';
+}
+
+function cloudAuth(email, pass, name) {
+  var btn = document.getElementById('authBtn'), signup = auth.mode === 'signup', p;
+  if (signup) {
+    if (name.length < 2) { authError('Digite seu nome (mínimo 2 letras).'); return; }
+    if (pass.length < 8) { authError('A senha precisa ter no mínimo 8 caracteres.'); return; }
+  }
+  btn.disabled = true;
+  if (signup) {
+    p = sb.auth.signUp({ email: email, password: pass, options: { data: { name: name, avatar: auth.avatar } } }).then(function(r) {
+      if (r.error) throw r.error;
+      if (!r.data.session) { authMode('login'); toast('Conta criada! Confirme seu e-mail para entrar. 📧'); return null; }
+      return r.data.user;
+    });
+  } else {
+    p = sb.auth.signInWithPassword({ email: email, password: pass }).then(function(r) { if (r.error) throw r.error; return r.data.user; });
+  }
+  p.then(function(user) { if (user) return startCloudSession(user, signup); })
+   .catch(function(err) { authError(authMsg(err)); })
+   .then(function() { btn.disabled = false; });
+}
+
+function startCloudSession(user, isNew) {
+  cloud.user = user;
+  return sb.from('profiles').select('name,avatar').eq('id', user.id).maybeSingle().then(function(r) {
+    var meta = user.user_metadata || {}, pr = r.data || { name: meta.name || 'Membro', avatar: meta.avatar || '🌱' };
+    state.user = { name: pr.name, avatar: pr.avatar, bio: 'Membro da comunidade Elograin', email: user.email };
+    state.posts = [];
+    saveState();
+    document.getElementById('authScreen').hidden = true;
+    document.getElementById('authForm').reset();
+    authError('');
+    showView('feed'); renderProfile();
+    if (isNew === true) toast('Bem-vindo(a) ao Elograin, ' + pr.name + '! 🌿');
+    else if (isNew === false) toast('Que bom te ver, ' + pr.name + '! 👋');
+    return loadPostsCloud();
+  });
 }

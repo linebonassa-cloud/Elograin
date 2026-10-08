@@ -1134,3 +1134,5 @@ label {
 .auth-note { text-align: center; color: var(--text-light); font-size: .75rem; margin: 14px 0 0; }
 .btn-logout { margin-top: 14px; padding: 10px 18px; border: 1.5px solid var(--border); background: none; color: var(--text); border-radius: 12px; font: 700 .85rem 'Inter', sans-serif; cursor: pointer; }
 .btn-logout:hover { background: var(--cream); }
+
+.card.nodel .more-btn, .card.nodel .post-menu { right: 10px; }
