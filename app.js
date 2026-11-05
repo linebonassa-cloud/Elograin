@@ -1112,17 +1112,24 @@ function hashPw(pw, saltB64) {
 
 function authMode(mode) {
   auth.mode = mode;
-  var signup = mode === 'signup';
-  document.getElementById('tabLogin').classList.toggle('on', !signup);
+  var signup = mode === 'signup', rec = mode === 'recovery';
+  document.getElementById('tabLogin').classList.toggle('on', mode === 'login');
   document.getElementById('tabSignup').classList.toggle('on', signup);
+  document.querySelector('.auth-tabs').style.display = rec ? 'none' : '';
+  document.getElementById('fEmail').style.display = rec ? 'none' : '';
   document.getElementById('fName').hidden = !signup;
   document.getElementById('fAvatar').hidden = !signup;
-  document.getElementById('pwHint').hidden = !signup;
-  document.getElementById('authBtn').textContent = signup ? 'Criar conta' : 'Entrar';
-  document.getElementById('aPass').autocomplete = signup ? 'new-password' : 'current-password';
+  document.getElementById('pwHint').hidden = !(signup || rec);
+  document.getElementById('forgotLink').style.display = (mode === 'login' && sb) ? '' : 'none';
+  document.getElementById('pwLabel').textContent = rec ? 'Nova senha' : 'Senha';
+  document.getElementById('authBtn').textContent = rec ? 'Salvar nova senha' : (signup ? 'Criar conta' : 'Entrar');
+  document.getElementById('aPass').autocomplete = (signup || rec) ? 'new-password' : 'current-password';
   authError('');
 }
-function authError(msg) { document.getElementById('authErr').textContent = msg; }
+function authError(msg, ok) {
+  var el = document.getElementById('authErr');
+  el.textContent = msg; el.classList.toggle('ok', !!ok);
+}
 function togglePw() {
   var i = document.getElementById('aPass'), show = i.type === 'password';
   i.type = show ? 'text' : 'password';
@@ -1136,6 +1143,7 @@ function pickAvatar(a) {
 
 function submitAuth(e) {
   e.preventDefault();
+  if (auth.mode === 'recovery') { submitRecovery(); return; }
   if (!window.crypto || !crypto.subtle) { authError('Este navegador não suporta login seguro. Abra o app em https.'); return; }
   var wait = Math.ceil((auth.lockUntil - Date.now()) / 1000);
   if (wait > 0) { authError('Muitas tentativas. Aguarde ' + wait + 's.'); return; }
@@ -1201,8 +1209,12 @@ function initAuth() {
     document.getElementById('authScreen').hidden = false;
     sb.auth.getSession().then(function(r) {
       var ses = r.data && r.data.session;
-      if (ses) startCloudSession(ses.user, null);
+      if (ses && RECOVERY) authMode('recovery');           // veio do e-mail: pede a nova senha em vez de entrar direto
+      else if (ses) startCloudSession(ses.user, null);
     }).catch(function() {});
+    sb.auth.onAuthStateChange(function(ev) {
+      if (ev === 'PASSWORD_RECOVERY') { document.getElementById('authScreen').hidden = false; authMode('recovery'); }
+    });
     return;
   }
   setTimeout(function() { toast('⚠️ Sem conexão com o servidor. Usando modo local.'); }, 800);
@@ -1216,6 +1228,7 @@ function initAuth() {
 // A chave "publishable" é pública por natureza. Quem protege os dados são as regras (RLS) criadas no banco.
 var SUPABASE_URL = 'https://lkbuejiqkjocmcdqcyxv.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_ecUzPh2z2oBWsOQm6HIC8g_nDOFPnqL';
+var RECOVERY = /type=recovery/.test(location.hash + location.search);
 var sb = (window.supabase && window.supabase.createClient) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 var cloud = { user: null };
 var pendingDel = 0;   // exclusões aguardando o fim do "Desfazer"
@@ -1266,13 +1279,17 @@ function publishError(e) {
 }
 
 function authMsg(err) {
+  console.error('Erro de autenticação:', err);
   var m = ((err && err.message) || '').toLowerCase();
   if (m.indexOf('invalid login') > -1) return 'E-mail ou senha incorretos.';
   if (m.indexOf('already registered') > -1) return 'Este e-mail já tem conta. Toque em "Entrar".';
   if (m.indexOf('not confirmed') > -1) return 'Confirme seu e-mail antes de entrar.';
   if (m.indexOf('rate limit') > -1 || m.indexOf('too many') > -1) return 'Muitas tentativas. Aguarde um pouco.';
+  if (m.indexOf('same password') > -1 || m.indexOf('different from the old') > -1) return 'Escolha uma senha diferente da anterior.';
   if (m.indexOf('password') > -1) return 'Senha fraca. Use no mínimo 8 caracteres.';
-  return 'Não foi possível concluir. Tente de novo.';
+  if (m.indexOf('fetch') > -1 || m.indexOf('network') > -1 || m.indexOf('load failed') > -1 || (err && err.status === 0)) return 'Sem conexão com o servidor. Confira a internet. Se continuar, o projeto do Supabase pode estar pausado.';
+  if (m.indexOf('expired') > -1 || m.indexOf('token') > -1) return 'Link expirado ou inválido. Peça um novo em "Esqueci minha senha".';
+  return 'Não foi possível concluir' + (m ? ' (' + m.slice(0, 80) + ')' : '') + '. Tente de novo.';
 }
 
 function cloudAuth(email, pass, name) {
@@ -1312,3 +1329,109 @@ function startCloudSession(user, isNew) {
     return loadPostsCloud();
   });
 }
+
+// ===== Recuperação de senha =====
+function forgotPassword() {
+  if (!sb) return;
+  var email = document.getElementById('aEmail').value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { authError('Digite seu e-mail acima e toque em "Esqueci minha senha" de novo.'); return; }
+  authError('Enviando...', true);
+  sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/' }).then(function(r) {
+    if (r.error) { console.error(r.error); authError(authMsg(r.error)); return; }
+    authError('Pronto! Se esse e-mail tiver conta, enviamos um link para criar uma nova senha. Olhe também o spam.', true);
+  });
+}
+function submitRecovery() {
+  var pass = document.getElementById('aPass').value, btn = document.getElementById('authBtn');
+  if (pass.length < 8) { authError('A senha precisa ter no mínimo 8 caracteres.'); return; }
+  btn.disabled = true;
+  sb.auth.updateUser({ password: pass }).then(function(r) {
+    btn.disabled = false;
+    if (r.error) { console.error(r.error); authError(authMsg(r.error)); return; }
+    RECOVERY = false; history.replaceState(null, '', location.pathname);
+    authMode('login'); startCloudSession(r.data.user, false);
+    toast('Senha atualizada! ✅');
+  });
+}
+
+// ===== CHAT COM A ELO (assistente de IA) =====
+// O app conversa com /api/chat (função no Vercel); a chave da IA nunca fica no navegador.
+var chat = { msgs: [], busy: false, err: '', built: false };
+var CHAT_SUGS = ['Como substituir ovo em um bolo?', 'O que costuma ter origem animal nos rótulos?', 'Ideia de jantar rápido e barato', 'Como garantir vitamina B12?'];
+
+function fmtChat(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
+
+function buildChat() {
+  if (chat.built) return; chat.built = true;
+  var fab = document.createElement('button');
+  fab.id = 'chatFab'; fab.className = 'chat-fab'; fab.setAttribute('aria-label', 'Conversar com a Elo');
+  fab.innerHTML = '<span aria-hidden="true">🌿</span> Elo'; fab.onclick = openChat;
+  var box = document.createElement('div');
+  box.id = 'chatBox'; box.className = 'chat-box'; box.hidden = true;
+  box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Chat com a Elo');
+  box.innerHTML = '<div class="chat-head"><div class="chat-av">🌿</div><div class="chat-title"><b>Elo</b><small>Assistente vegana do Elograin</small></div>' +
+    '<button class="chat-x" onclick="resetChat()" aria-label="Nova conversa" title="Nova conversa">↺</button>' +
+    '<button class="chat-x" onclick="closeChat()" aria-label="Fechar">✕</button></div>' +
+    '<div class="chat-msgs" id="chatMsgs" aria-live="polite"></div><div class="chat-sugs" id="chatSugs"></div>' +
+    '<form class="chat-form" onsubmit="sendChat(event)"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Pergunte sobre receitas, rótulos..." aria-label="Mensagem">' +
+    '<button type="submit" id="chatSend" aria-label="Enviar">➤</button></form>' +
+    '<p class="chat-note">A Elo é uma IA e pode errar. Não substitui nutricionista ou médico.</p>';
+  document.body.appendChild(fab); document.body.appendChild(box);
+  document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeChat(); });
+  renderChat();
+}
+function openChat() {
+  if (!sb || !cloud.user) { toast('Entre na sua conta para falar com a Elo.'); return; }
+  document.getElementById('chatBox').hidden = false;
+  document.getElementById('chatFab').style.display = 'none';
+  setTimeout(function() { document.getElementById('chatInput').focus(); }, 100);
+}
+function closeChat() {
+  var b = document.getElementById('chatBox'); if (!b || b.hidden) return;
+  b.hidden = true; document.getElementById('chatFab').style.display = '';
+}
+function resetChat() { chat.msgs = []; chat.err = ''; renderChat(); }
+
+function renderChat() {
+  var list = document.getElementById('chatMsgs');
+  var html = '<div class="cb bot">Oi! Eu sou a Elo 🌿 Posso ajudar com receitas, substituições, dúvidas de rótulos e dicas para quem é vegano ou está começando. Como posso ajudar?</div>';
+  html += chat.msgs.map(function(m) { return '<div class="cb ' + (m.role === 'user' ? 'me' : 'bot') + '">' + fmtChat(m.content) + '</div>'; }).join('');
+  if (chat.busy) html += '<div class="cb bot typing" aria-label="Elo está digitando"><i></i><i></i><i></i></div>';
+  if (chat.err) html += '<div class="cb err">' + esc(chat.err) + '</div>';
+  list.innerHTML = html; list.scrollTop = list.scrollHeight;
+  document.getElementById('chatSugs').innerHTML = chat.msgs.length ? '' : CHAT_SUGS.map(function(s) { return '<button type="button" onclick="askChat(this.textContent)">' + esc(s) + '</button>'; }).join('');
+  document.getElementById('chatSend').disabled = chat.busy;
+}
+function sendChat(e) {
+  e.preventDefault();
+  var i = document.getElementById('chatInput'), t = i.value.trim();
+  if (!t) return;
+  i.value = ''; askChat(t);
+}
+function askChat(text) {
+  text = (text || '').trim();
+  if (!text || chat.busy) return;
+  if (!sb || !cloud.user) { toast('Entre na sua conta para falar com a Elo.'); return; }
+  chat.msgs.push({ role: 'user', content: text.slice(0, 500) });
+  chat.busy = true; chat.err = ''; renderChat();
+  sb.auth.getSession().then(function(r) {
+    var s = r.data && r.data.session;
+    if (!s) throw new Error('Sua sessão expirou. Saia e entre de novo.');
+    return fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.access_token },
+      body: JSON.stringify({ messages: chat.msgs.slice(-12).map(function(m) { return { role: m.role, content: m.content }; }) })
+    });
+  }).then(function(res) {
+    return res.json().catch(function() { return {}; }).then(function(d) {
+      if (res.status === 404) throw new Error('O chat ainda não foi ativado no servidor.');
+      if (!res.ok) throw new Error(d.error || 'Não foi possível responder agora.');
+      return d;
+    });
+  }).then(function(d) {
+    chat.msgs.push({ role: 'assistant', content: d.reply });
+  }).catch(function(err) {
+    chat.err = (err && err.message && err.message !== 'Failed to fetch') ? err.message : 'Sem conexão. Confira sua internet e tente de novo.';
+  }).then(function() { chat.busy = false; renderChat(); });
+}
+document.addEventListener('DOMContentLoaded', buildChat);
