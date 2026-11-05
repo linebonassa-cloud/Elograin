@@ -86,7 +86,7 @@ const MOCK_PROFILES = [
 
 let state = {
   currentView: 'feed',
-  darkMode: false,
+  darkMode: true,
   posts: [...MOCK_POSTS],
   recipes: [...MOCK_RECIPES],
   places: [...MOCK_PLACES],
@@ -117,7 +117,9 @@ function loadState() {
       state = Object.assign({}, state, parsed);
     }
   } catch (e) {}
+  if (!localStorage.getItem('elograin_identity_v66')) { state.darkMode = true; localStorage.setItem('elograin_identity_v66', '1'); }   // nova identidade: abre no escuro uma vez
   if (state.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
+  else document.documentElement.removeAttribute('data-theme');
 }
 
 function saveState() {
@@ -448,7 +450,7 @@ function drawMarkers() {
   state.osmMarkers = [];
   state.places.forEach(function(place) {
     if (place.lat == null) return;   // endereço não encontrado: continua na lista, sem pino
-    var color = place.badge === 'vegan' ? '#81B29A' : '#E07A5F';
+    var color = place.badge === 'vegan' ? '#81B29A' : '#F4A261';
     var marker = L.circleMarker([place.lat, place.lng], {
       radius: place.real ? 13 : 10, fillColor: color, color: '#fff', weight: place.real ? 3 : 2, opacity: 1, fillOpacity: 0.9
     }).addTo(state.osmMap);
@@ -1356,6 +1358,7 @@ function submitRecovery() {
 
 // ===== CHAT COM A ELO (assistente de IA) =====
 // O app conversa com /api/chat (função no Vercel); a chave da IA nunca fica no navegador.
+var LOGO_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lgc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4A261"/><stop offset="1" stop-color="#E07A5F"/></linearGradient><clipPath id="lcc"><circle cx="19" cy="24" r="9.5"/></clipPath></defs><rect width="48" height="48" rx="14" fill="url(#lgc)"/><circle cx="29" cy="24" r="9.5" fill="#81B29A" clip-path="url(#lcc)"/><circle cx="19" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/><circle cx="29" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/></svg>';
 var chat = { msgs: [], busy: false, err: '', built: false };
 var CHAT_SUGS = ['Como substituir ovo em um bolo?', 'O que costuma ter origem animal nos rótulos?', 'Ideia de jantar rápido e barato', 'Como garantir vitamina B12?'];
 
@@ -1369,7 +1372,7 @@ function buildChat() {
   var box = document.createElement('div');
   box.id = 'chatBox'; box.className = 'chat-box'; box.hidden = true;
   box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Chat com a Elo');
-  box.innerHTML = '<div class="chat-head"><div class="chat-av">🌿</div><div class="chat-title"><b>Elo</b><small>Assistente vegana do Elograin</small></div>' +
+  box.innerHTML = '<div class="chat-head"><div class="chat-av">' + LOGO_SVG + '</div><div class="chat-title"><b>Elo</b><small>Assistente vegana do Elograin</small></div>' +
     '<button class="chat-x" onclick="resetChat()" aria-label="Nova conversa" title="Nova conversa">↺</button>' +
     '<button class="chat-x" onclick="closeChat()" aria-label="Fechar">✕</button></div>' +
     '<div class="chat-msgs" id="chatMsgs" aria-live="polite"></div><div class="chat-sugs" id="chatSugs"></div>' +

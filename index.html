@@ -1,18 +1,19 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#1B4D3E">
+  <meta name="theme-color" content="#16181C">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Elograin - SuperApp para comunidade vegana">
   <title>Elograin</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/logo.svg">
   <link rel="apple-touch-icon" href="icons/icon-192x192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
   <!-- Bibliotecas de animação (CDN) -->
   <script defer src="https://cdn.jsdelivr.net/npm/motion@10.18.0/dist/motion.js"></script>
@@ -52,8 +53,8 @@
     <!-- LOGIN / CADASTRO -->
   <div id="authScreen" class="auth" hidden>
     <div class="auth-card">
-      <div class="auth-logo">🌿</div>
-      <h1>Elograin</h1>
+      <div class="auth-logo"><svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4A261"/><stop offset="1" stop-color="#E07A5F"/></linearGradient><clipPath id="lca"><circle cx="19" cy="24" r="9.5"/></clipPath></defs><rect width="48" height="48" rx="14" fill="url(#lga)"/><circle cx="29" cy="24" r="9.5" fill="#81B29A" clip-path="url(#lca)"/><circle cx="19" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/><circle cx="29" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/></svg></div>
+      <h1>Elo<em>grain</em></h1>
       <p class="auth-sub">A comunidade vegana que conecta você</p>
       <div class="auth-tabs">
         <button type="button" id="tabLogin" class="on" onclick="authMode('login')">Entrar</button>
@@ -76,8 +77,8 @@
 
   <header class="app-header">
     <div class="logo">
-      <div class="logo-icon">🌿</div>
-      <span>Elograin</span><small class="ver">v6.5</small>
+      <div class="logo-icon"><svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lgh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4A261"/><stop offset="1" stop-color="#E07A5F"/></linearGradient><clipPath id="lch"><circle cx="19" cy="24" r="9.5"/></clipPath></defs><rect width="48" height="48" rx="14" fill="url(#lgh)"/><circle cx="29" cy="24" r="9.5" fill="#81B29A" clip-path="url(#lch)"/><circle cx="19" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/><circle cx="29" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/></svg></div>
+      <span>Elo<em>grain</em></span><small class="ver">v6.6</small>
     </div>
     <div class="header-actions">
       <button class="icon-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
@@ -274,23 +275,23 @@
   <nav class="bottom-nav">
     <div class="bottom-nav-inner">
       <button class="nav-item active" data-view="feed">
-        <span class="nav-icon">🏠</span>
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg></span>
         <span>Início</span>
       </button>
       <button class="nav-item" data-view="recipes">
-        <span class="nav-icon">🍽️</span>
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12h18a9 9 0 0 1-18 0z"/><path d="M8.5 8.5c-.8-1 .8-2 0-3M12.5 8.5c-.8-1 .8-2 0-3M16.5 8.5c-.8-1 .8-2 0-3"/></svg></span>
         <span>Receitas</span>
       </button>
       <button class="nav-item" data-view="explore">
-        <span class="nav-icon">🗺️</span>
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.6 8.4-2 5.2-5.2 2 2-5.2z"/></svg></span>
         <span>Explorar</span>
       </button>
       <button class="nav-item" data-view="consume">
-        <span class="nav-icon">🛒</span>
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 8.5h14l-1.1 11.5H6.1z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/></svg></span>
         <span>Consumo</span>
       </button>
       <button class="nav-item" data-view="connect">
-        <span class="nav-icon">💕</span>
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.2-9.4A5 5 0 0 1 12 7.6a5 5 0 0 1 9.2 3C19.5 15.400 12 20 12 20z"/></svg></span>
         <span>Conexões</span>
       </button>
     </div>
