@@ -85,7 +85,7 @@ const MOCK_PROFILES = [
 ];
 
 let state = {
-  currentView: 'feed',
+  currentView: 'home',
   darkMode: true,
   posts: [...MOCK_POSTS],
   recipes: [...MOCK_RECIPES],
@@ -450,7 +450,7 @@ function drawMarkers() {
   state.osmMarkers = [];
   state.places.forEach(function(place) {
     if (place.lat == null) return;   // endereço não encontrado: continua na lista, sem pino
-    var color = place.badge === 'vegan' ? '#81B29A' : '#F4A261';
+    var color = place.badge === 'vegan' ? '#9AA06A' : '#D99A58';
     var marker = L.circleMarker([place.lat, place.lng], {
       radius: place.real ? 13 : 10, fillColor: color, color: '#fff', weight: place.real ? 3 : 2, opacity: 1, fillOpacity: 0.9
     }).addTo(state.osmMap);
@@ -476,13 +476,14 @@ function showView(viewName) {
   state.currentView = viewName;
   document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
   document.getElementById(viewName + 'View').classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
-  document.querySelector('.nav-item[data-view="' + viewName + '"]').classList.add('active');
+  document.querySelectorAll('.nav-item, .side-item').forEach(function(n) { n.classList.remove('active'); });
+  document.querySelectorAll('.nav-item[data-view="' + viewName + '"], .side-item[data-view="' + viewName + '"]').forEach(function(n) { n.classList.add('active'); });
   window.scrollTo(0, 0);
   renderCurrentView();
 }
 
 function renderCurrentView() {
+  if (state.currentView === 'home') renderHome();
   if (state.currentView === 'feed') simulateLoading('feed', function() { renderFeed(); });
   if (state.currentView === 'recipes') simulateLoading('recipes', function() { renderRecipes(); });
   if (state.currentView === 'explore') simulateLoading('explore', function() { renderExplore(); });
@@ -833,6 +834,7 @@ function matchCard(p) {
 
 // ===== PROFILE =====
 function renderProfile() {
+  updateHeaderAvatar();
   document.getElementById('profileName').textContent = state.user.name;
   document.getElementById('profileAvatar').textContent = state.user.avatar;
   document.getElementById('profileBio').textContent = state.user.bio;
@@ -984,16 +986,11 @@ document.addEventListener('DOMContentLoaded', function() {
   loadState();
   initAuth();
 
-  document.querySelectorAll('.nav-item').forEach(function(btn) {
+  document.querySelectorAll('.nav-item, .side-item').forEach(function(btn) {
     btn.addEventListener('click', function() { showView(btn.dataset.view); });
   });
 
-  document.getElementById('fabBtn').addEventListener('click', function() {
-    if (state.currentView === 'explore') state.createType = 'review';
-    else if (state.currentView === 'recipes') state.createType = 'recipe';
-    else state.createType = 'post';
-    openCreateModal();
-  });
+  document.getElementById('fabBtn').addEventListener('click', openCreateMenu);
 
   document.getElementById('closeCreateModal').addEventListener('click', closeCreateModal);
   document.getElementById('closeDetailModal').addEventListener('click', closeDetailModal);
@@ -1084,16 +1081,15 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   themeToggle.textContent = state.darkMode ? '☀️' : '🌙';
 
-  document.getElementById('notifBtn').addEventListener('click', function() {
-    toast('🔔 Você tem 3 notificações novas!');
-  });
+  document.getElementById('notifBtn').addEventListener('click', openNotifs);   // sem número inventado: mostra o estado real
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(function() {});
   }
 
   initSwipeEvents();
-  renderCurrentView();
+  updateHeaderAvatar();
+  showView('home');
 });
 
 // ===== LOGIN / CADASTRO =====
@@ -1190,8 +1186,7 @@ function startSession(email, isNew) {
   document.getElementById('authScreen').hidden = true;
   document.getElementById('authForm').reset();
   authError('');
-  showView('feed');
-  renderProfile();
+  showView('home'); renderProfile();
   toast(isNew ? 'Bem-vindo(a) ao Elograin, ' + acc.name + '! 🌿' : 'Que bom te ver, ' + acc.name + '! 👋');
 }
 
@@ -1325,7 +1320,7 @@ function startCloudSession(user, isNew) {
     document.getElementById('authScreen').hidden = true;
     document.getElementById('authForm').reset();
     authError('');
-    showView('feed'); renderProfile();
+    showView('home'); renderProfile();
     if (isNew === true) toast('Bem-vindo(a) ao Elograin, ' + pr.name + '! 🌿');
     else if (isNew === false) toast('Que bom te ver, ' + pr.name + '! 👋');
     return loadPostsCloud();
@@ -1358,7 +1353,7 @@ function submitRecovery() {
 
 // ===== CHAT COM A ELO (assistente de IA) =====
 // O app conversa com /api/chat (função no Vercel); a chave da IA nunca fica no navegador.
-var LOGO_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lgc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F4A261"/><stop offset="1" stop-color="#E07A5F"/></linearGradient><clipPath id="lcc"><circle cx="19" cy="24" r="9.5"/></clipPath></defs><rect width="48" height="48" rx="14" fill="url(#lgc)"/><circle cx="29" cy="24" r="9.5" fill="#81B29A" clip-path="url(#lcc)"/><circle cx="19" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/><circle cx="29" cy="24" r="9.5" fill="none" stroke="#16181C" stroke-width="3.2"/></svg>';
+var LOGO_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="mgc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F0784E"/><stop offset="1" stop-color="#D99A58"/></linearGradient></defs><path d="M24 41C10 31 6 24 6 17.5 6 12.8 9.7 9 14.4 9c3.6 0 7 2.2 9.6 5.5C26.6 11.2 30 9 33.6 9 38.3 9 42 12.8 42 17.5 42 24 38 31 24 41z" fill="none" stroke="url(#mgc)" stroke-width="3.4" stroke-linejoin="round"/><path d="M22.5 31c0-7.5 4.5-12 12.5-13 0 8-4.5 12.5-12.5 13z" fill="url(#mgc)"/><path d="M23.5 30.5c3-3.5 6-6 9.5-8" stroke="#241A18" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>';
 var chat = { msgs: [], busy: false, err: '', built: false };
 var CHAT_SUGS = ['Como substituir ovo em um bolo?', 'O que costuma ter origem animal nos rótulos?', 'Ideia de jantar rápido e barato', 'Como garantir vitamina B12?'];
 
@@ -1438,3 +1433,141 @@ function askChat(text) {
   }).then(function() { chat.busy = false; renderChat(); });
 }
 document.addEventListener('DOMContentLoaded', buildChat);
+
+// ===== REDESIGN v7: início, busca global, favoritos e menu de criação =====
+var ICO = {"home": "<path d=\"M3 11.5 12 4l9 7.5\"/><path d=\"M5.5 10v9.5h13V10\"/><path d=\"M10 19.5v-5h4v5\"/>", "food": "<path d=\"M7 3v7a2.5 2.5 0 0 0 5 0V3M9.5 3v18\"/><path d=\"M17 3c-2.2 1.8-3 4.5-3 8h3v10\"/>", "bread": "<path d=\"M4 11a8 6 0 0 1 16 0v1H4z\"/><path d=\"M5.5 12v6.5h13V12\"/>", "bag": "<path d=\"M5 8.5h14l-1.1 11.5H6.1z\"/><path d=\"M9 8.5V7a3 3 0 0 1 6 0v1.5\"/>", "bowl": "<path d=\"M3 12h18a9 9 0 0 1-18 0z\"/><path d=\"M8.5 8.5c-.8-1 .8-2 0-3M12.5 8.5c-.8-1 .8-2 0-3M16.5 8.5c-.8-1 .8-2 0-3\"/>", "heart": "<path d=\"M12 20s-7.5-4.6-9.2-9.4A5 5 0 0 1 12 7.6a5 5 0 0 1 9.2 3C19.5 15.4 12 20 12 20z\"/>", "people": "<circle cx=\"9\" cy=\"8\" r=\"3\"/><path d=\"M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6\"/><circle cx=\"17\" cy=\"9\" r=\"2.4\"/><path d=\"M17 14c2.5 0 4.5 2 4.5 4.5\"/>", "leaf": "<path d=\"M5 19c0-8 5-13 14-14 0 9-5 14-14 14z\"/><path d=\"M5 19c3-4 6-7 10-9\"/>", "compass": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m15.6 8.4-2 5.2-5.2 2 2-5.2z\"/>", "user": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8\"/>", "pin": "<path d=\"M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z\"/><circle cx=\"12\" cy=\"9.5\" r=\"2.5\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/>", "arrow": "<path d=\"M5 12h14M13 6l6 6-6 6\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8\"/>", "help": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01\"/>", "out": "<path d=\"M9 4H5v16h4M16 8l4 4-4 4M20 12H9\"/>", "chat": "<path d=\"M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z\"/>", "bell": "<path d=\"M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z\"/><path d=\"M10 21h4\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>"};
+function ic(n) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICO[n] || '') + '</svg>'; }
+var PLACE_CAT = { restaurante: 'Restaurante', confeitaria: 'Confeitaria', padaria: 'Padaria', cafe: 'Cafeteria', lanchonete: 'Lanchonete', sorveteria: 'Sorveteria', mercado: 'Mercado', loja: 'Loja' };
+var HERO_SVG = '<svg class="hero-art" viewBox="0 0 400 300" role="img" aria-label="Ilustração de um bowl vegano com tofu, abacate, tomate e grãos"><ellipse cx="200" cy="268" rx="150" ry="13" fill="#000" opacity=".28"/><path d="M36 150h328c0 72-62 116-164 116S36 222 36 150z" fill="#E8D2B9"/><path d="M36 150h328c0 15-2 29-7 42-30 11-72 15-157 15s-127-4-157-15c-5-13-7-27-7-42z" fill="#D2B598"/><ellipse cx="200" cy="150" rx="164" ry="32" fill="#C98A52"/><g fill="#A86F3E"><circle cx="150" cy="158" r="3"/><circle cx="180" cy="166" r="3"/><circle cx="215" cy="160" r="3"/><circle cx="246" cy="168" r="3"/><circle cx="283" cy="158" r="3"/><circle cx="116" cy="146" r="3"/></g><path d="M62 138c18-34 52-40 72-20-8 24-40 38-72 20z" fill="#7A3E6B"/><path d="M78 134c14-18 32-22 46-12" stroke="#A8689A" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M246 126c22-36 74-38 100-8-32 4-70 20-100 8z" fill="#8F9A4A"/><path d="M256 126c20-26 58-28 82-10-28 3-58 14-82 10z" fill="#D6DF94"/><g transform="rotate(-8 176 112)"><rect x="150" y="88" width="56" height="48" rx="9" fill="#7B3F1E"/><rect x="154" y="92" width="48" height="12" rx="6" fill="#A5602E" opacity=".7"/></g><g transform="rotate(10 232 118)"><rect x="205" y="96" width="54" height="46" rx="9" fill="#8A4824"/><rect x="209" y="100" width="46" height="11" rx="5" fill="#B06A35" opacity=".7"/></g><g transform="rotate(-4 150 136)"><rect x="118" y="108" width="50" height="44" rx="9" fill="#6F3719"/></g><g fill="#F4E7D8"><circle cx="165" cy="104" r="2"/><circle cx="188" cy="112" r="2"/><circle cx="226" cy="108" r="2"/><circle cx="244" cy="122" r="2"/><circle cx="138" cy="124" r="2"/></g><circle cx="106" cy="112" r="17" fill="#D8452E"/><circle cx="100" cy="106" r="5" fill="#F58A72" opacity=".7"/><circle cx="318" cy="146" r="15" fill="#D8452E"/><circle cx="313" cy="141" r="4.500" fill="#F58A72" opacity=".7"/><path d="M70 112c-8-34 6-62 40-72 8 32-6 62-40 72z" fill="#777C50"/><path d="M96 66c12 8 22 20 26 36" stroke="#9AA06A" stroke-width="2" fill="none"/></svg>';
+
+// ----- favoritos (salvos neste aparelho) -----
+function favKeys() { try { return JSON.parse(localStorage.getItem('elograin_favs') || '[]'); } catch (e) { return []; } }
+function isFav(k) { return favKeys().indexOf(k) > -1; }
+function toggleFav(k, btn, e) {
+  if (e) e.stopPropagation();
+  var f = favKeys(), i = f.indexOf(k);
+  if (i > -1) f.splice(i, 1); else f.push(k);
+  try { localStorage.setItem('elograin_favs', JSON.stringify(f)); } catch (x) {}
+  btn.classList.toggle('on', i === -1); btn.setAttribute('aria-pressed', i === -1);
+  toast(i === -1 ? 'Salvo nos favoritos deste aparelho' : 'Removido dos favoritos');
+}
+function favBtn(k) { var on = isFav(k); return '<button class="fav-btn' + (on ? ' on' : '') + '" aria-label="Favoritar" aria-pressed="' + on + '" onclick="toggleFav(\'' + k + '\',this,event)">' + ic('heart') + '</button>'; }
+
+// ----- dados reais (nada inventado) -----
+function placesReal() { return (state.places || []).filter(function(p) { return p.real; }); }
+function realRecipes() { var mine = state.myRecipes || []; return (sb && cloud.user) ? mine.slice() : (state.recipes || []).concat(mine); }
+function topPosts(n) { return (state.posts || []).slice().sort(function(a, b) { return (b.likes || 0) - (a.likes || 0); }).slice(0, n); }
+function goTo(v) { if (v === 'more') openMore(); else showView(v); }
+
+// ----- cartões "Em alta" -----
+function tcard(cls, chip, icon, cover, body) {
+  return '<article class="tcard ' + cls + '"><div class="tcover"><span class="tchip">' + ic(icon) + ' ' + chip + '</span>' + cover + '</div><div class="tbody">' + body + '</div></article>';
+}
+function placeCard(p) {
+  var cat = PLACE_CAT[p.category] || p.type;
+  return tcard('t-rest', 'Restaurante', 'pin', favBtn('p:' + p.id) + '<span class="tbig">' + esc(p.icon || '🍽️') + '</span>',
+    '<h3>' + esc(p.name) + '</h3><p class="tmeta">' + esc(cat) + ' · ' + esc(p.type) + '</p>' + (p.hours ? '<p class="tsub">🕒 ' + esc(p.hours) + '</p>' : '<p class="tsub">' + esc(p.address) + '</p>') +
+    '<button class="tbtn" onclick="showPlaceDetail(' + p.id + ')">' + ic('pin') + ' Ver no mapa</button>');
+}
+function recipeCard(r) {
+  var rt = r.reviews ? '<span>⭐ ' + r.rating + ' (' + r.reviews + ')</span>' : '<span>Nova receita</span>';
+  return tcard('t-rec', 'Receita', 'bowl', favBtn('r:' + r.id) + '<span class="tbig">' + esc(r.image || '🍽️') + '</span>',
+    '<h3>' + esc(r.title) + '</h3><p class="tmeta">por ' + esc(r.author) + '</p><p class="tsub">' + rt + ' · ⏱️ ' + esc(r.time) + '</p>' +
+    '<button class="tbtn" onclick="showRecipeDetail(' + r.id + ')">' + ic('bowl') + ' Ver receita</button>');
+}
+function postCard(p) {
+  return tcard('t-post', 'Comunidade', 'people', '',
+    '<div class="thead"><div class="avatar">' + esc(p.avatar) + '</div><div><b>' + esc(p.author) + '</b><small>' + esc(p.time) + '</small></div></div>' +
+    '<p class="tclamp">' + esc(p.content) + '</p><p class="tsub">♥ ' + (p.likes || 0) + ' · 💬 ' + (p.comments || 0) + '</p>' +
+    '<button class="tbtn" onclick="showView(\'feed\')">' + ic('chat') + ' Ver publicação</button>');
+}
+function ctaCard(cls, chip, icon, emoji, title, text, label, action) {
+  return tcard(cls + ' t-cta', chip, icon, '<span class="tbig">' + emoji + '</span>', '<h3>' + title + '</h3><p class="tsub">' + text + '</p><button class="tbtn" onclick="' + action + '">' + label + '</button>');
+}
+function trendCards() {
+  var c = [], pl = placesReal().slice(0, 2), rc = realRecipes().slice(0, 2), ps = topPosts(2);
+  pl.forEach(function(p) { c.push(placeCard(p)); });
+  if (rc.length) rc.forEach(function(r) { c.push(recipeCard(r)); });
+  else c.push(ctaCard('t-rec', 'Receita', 'bowl', '🍽️', 'Compartilhe a primeira receita', 'Mostre seu prato favorito para a comunidade.', 'Compartilhar receita', "startCreate('recipe')"));
+  if (ps.length) ps.forEach(function(p) { c.push(postCard(p)); });
+  else c.push(ctaCard('t-post', 'Comunidade', 'people', '💬', 'Comece a conversa', 'Ainda não há publicações. Que tal dividir uma dica?', 'Publicar dica', "startCreate('post','dica')"));
+  c.push(ctaCard('t-mkt', 'Mercado', 'bag', '🛒', 'Produtos veganos', 'Veja o que a comunidade encontra nos mercados e lojas.', 'Explorar mercado', "showView('consume')"));
+  return c.join('');
+}
+
+// ----- tela inicial -----
+function sidePanels() {
+  var pl = placesReal().slice(0, 3), rc = realRecipes().slice().sort(function(a, b) { return (b.rating || 0) - (a.rating || 0); }).slice(0, 3);
+  var near = pl.length ? pl.map(function(p) { return '<button class="prow" onclick="showPlaceDetail(' + p.id + ')"><span class="pico">' + esc(p.icon || '📍') + '</span><span><b>' + esc(p.name) + '</b><small>' + esc(PLACE_CAT[p.category] || p.type) + '</small></span></button>'; }).join('') : '<p class="tsub">Nenhum estabelecimento cadastrado ainda.</p>';
+  var pop = rc.length ? rc.map(function(r) { return '<button class="prow" onclick="showRecipeDetail(' + r.id + ')"><span class="pico">' + esc(r.image || '🍽️') + '</span><span><b>' + esc(r.title) + '</b><small>' + (r.reviews ? '⭐ ' + r.rating : 'por ' + esc(r.author)) + '</small></span></button>'; }).join('') : '<p class="tsub">As receitas mais bem avaliadas vão aparecer aqui.</p>';
+  return '<section class="panel"><div class="phead"><h3>' + ic('pin') + ' Por perto de você</h3><button class="plink" onclick="showView(\'explore\')">Ver mapa</button></div>' + near + '</section>' +
+    '<section class="panel"><div class="phead"><h3>' + ic('people') + ' Conecte-se</h3></div><p class="tsub">Encontre pessoas que compartilham seus interesses e faça novas amizades.</p><button class="tbtn" onclick="showView(\'connect\')">' + ic('people') + ' Ver conexões</button></section>' +
+    '<section class="panel"><div class="phead"><h3>' + ic('bowl') + ' Receitas populares</h3><button class="plink" onclick="showView(\'recipes\')">Ver todas</button></div>' + pop + '</section>';
+}
+function renderHome() {
+  var D = [['food', 'Restaurantes e Lanchonetes', 'explore'], ['bread', 'Padarias e Confeitarias', 'explore'], ['bag', 'Mercados e Lojas', 'consume'], ['bowl', 'Receitas', 'recipes'], ['heart', 'Relacionamentos', 'connect'], ['people', 'Comunidade', 'feed']];
+  var M = [['food', 'Restaurantes', 'explore'], ['bowl', 'Receitas', 'recipes'], ['bag', 'Mercado', 'consume'], ['people', 'Comunidade', 'feed'], ['heart', 'Conexões', 'connect'], ['leaf', 'Mais', 'more']];
+  var cat = function(a) { return '<button class="cat" onclick="goTo(\'' + a[2] + '\')"><span class="cico">' + ic(a[0]) + '</span><span>' + a[1] + '</span></button>'; };
+  document.getElementById('homeContent').innerHTML =
+    '<div class="home-grid"><div class="home-main">' +
+    '<section class="hero"><div class="hero-copy"><span class="hero-kicker">Mais sabor. Mais conexões. Zero crueldade.</span>' +
+    '<h1>Descubra, compartilhe e conecte-se com uma <em>vida 100% vegetal!</em></h1><p>Restaurantes, receitas, produtos e uma comunidade incrível te esperam aqui.</p></div>' +
+    '<div class="hero-art-wrap">' + HERO_SVG + '</div>' +
+    '<form class="hero-search" onsubmit="heroSearch(event)"><label class="hs-loc">' + ic('pin') + '<input id="heroLoc" placeholder="Sua localização" aria-label="Localização" autocomplete="off"></label>' +
+    '<label class="hs-q">' + ic('search') + '<input id="heroQ" placeholder="O que você procura?" aria-label="O que você procura?" autocomplete="off"></label>' +
+    '<button type="submit" aria-label="Pesquisar">' + ic('arrow') + '</button></form></section>' +
+    '<div class="cats cats-d">' + D.map(cat).join('') + '</div><div class="cats cats-m">' + M.map(cat).join('') + '</div>' +
+    '<div class="section-header"><h2 class="section-title">🔥 Em alta na comunidade</h2><button class="plink" onclick="showView(\'feed\')">Ver mais ' + ic('arrow') + '</button></div>' +
+    '<div class="trend">' + trendCards() + '</div></div><aside class="home-side">' + sidePanels() + '</aside></div>';
+}
+
+// ----- busca global (restaurantes, receitas, produtos, posts) -----
+function searchAll(q, loc) {
+  q = (q || '').toLowerCase().trim(); loc = (loc || '').toLowerCase().trim();
+  var has = function() { for (var i = 0; i < arguments.length; i++) { if (arguments[i] && String(arguments[i]).toLowerCase().indexOf(q) > -1) return true; } return false; };
+  var prods = (state.productsMarket || []).concat(state.productsBeauty || []);
+  return {
+    places: (state.places || []).filter(function(p) { return (!q || has(p.name, p.address, p.type, p.description, p.category)) && (!loc || String(p.address || '').toLowerCase().indexOf(loc) > -1); }),
+    recipes: !q ? [] : realRecipes().filter(function(r) { return has(r.title, r.author) || (r.ingredients || []).some(function(i) { return has(i); }); }),
+    posts: !q ? [] : (state.posts || []).filter(function(p) { return has(p.content, p.author); }),
+    products: !q ? [] : prods.filter(function(p) { return has(p.name, p.brand, p.category); })
+  };
+}
+var lastQ = '';
+function runSearch(q, loc) {
+  q = (q || '').trim(); loc = (loc || '').trim();
+  if (!q && !loc) { toast('Digite o que você procura'); return; }
+  lastQ = q;
+  var r = searchAll(q, loc), total = r.places.length + r.recipes.length + r.posts.length + r.products.length;
+  var row = function(i, t, s, act) { return '<button class="sr" onclick="' + act + '"><span class="pico">' + i + '</span><span><b>' + esc(t) + '</b><small>' + esc(s) + '</small></span></button>'; };
+  var sec = function(t, a) { return a.length ? '<h4 class="srh">' + t + '</h4>' + a.join('') : ''; };
+  var body = total ? sec('Restaurantes e lojas', r.places.slice(0, 8).map(function(p) { return row(p.icon || '📍', p.name, p.address || p.type, 'showPlaceDetail(' + p.id + ')'); })) +
+    sec('Receitas', r.recipes.slice(0, 8).map(function(x) { return row(x.image || '🍽️', x.title, 'por ' + x.author, 'showRecipeDetail(' + x.id + ')'); })) +
+    sec('Produtos', r.products.slice(0, 8).map(function(x) { return row(x.icon || '🛒', x.name, x.brand + ' · ' + x.category, "closeDetailModal();showView('consume')"); })) +
+    sec('Publicações', r.posts.slice(0, 6).map(function(x) { return row(x.avatar, x.author, x.content.slice(0, 70), 'openFeedSearch()'); }))
+    : emptyState('Nada encontrado para "' + esc(q || loc) + '"', '🔍');
+  openDetailModal('Resultados da busca', body);
+}
+function openFeedSearch() { closeDetailModal(); showView('feed'); var i = document.getElementById('feedSearch'); if (i) { i.value = lastQ; renderFeed(); } }
+function globalSearch(e) { e.preventDefault(); runSearch(document.getElementById('gSearch').value, ''); }
+function heroSearch(e) { e.preventDefault(); runSearch(document.getElementById('heroQ').value, document.getElementById('heroLoc').value); }
+
+// ----- criar, mais, configurações, ajuda, notificações -----
+function startCreate(type, tag) {
+  closeDetailModal(); state.createType = type; openCreateModal();
+  if (tag) { var s = document.getElementById('postTag'); if (s) s.value = tag; }
+}
+function openCreateMenu() {
+  var it = [['💡', 'Publicar dica', "startCreate('post','dica')"], ['🍽️', 'Compartilhar receita', "startCreate('recipe')"], ['✨', 'Compartilhar experiência', "startCreate('post','experiencia')"], ['❓', 'Fazer uma pergunta', "startCreate('post','duvida')"], ['⭐', 'Avaliar um lugar', "startCreate('review')"]];
+  openDetailModal('Criar', '<div class="cmenu">' + it.map(function(x) { return '<button onclick="' + x[2] + '"><span class="ci">' + x[0] + '</span>' + x[1] + '</button>'; }).join('') + '</div>');
+}
+function menuList(items) { return '<div class="cmenu">' + items.map(function(x) { return '<button onclick="' + x[1] + '"><span class="ci">' + x[0] + '</span>' + x[2] + '</button>'; }).join('') + '</div>'; }
+function openMore() {
+  openDetailModal('Mais', menuList([['👤', "closeDetailModal();showView('profile')", 'Meu perfil'], ['🗺️', "closeDetailModal();showView('explore')", 'Eventos e avaliações'], ['🌓', "closeDetailModal();document.getElementById('themeToggle').click()", 'Trocar tema claro/escuro'], ['🌿', "closeDetailModal();openChat()", 'Falar com a Elo'], ['🚪', "closeDetailModal();logout()", 'Sair da conta']]));
+}
+function openSettings() { openDetailModal('Configurações', menuList([['🌓', "closeDetailModal();document.getElementById('themeToggle').click()", 'Trocar tema claro/escuro'], ['👤', "closeDetailModal();showView('profile')", 'Meu perfil'], ['🚪', "closeDetailModal();logout()", 'Sair da conta']])); }
+function openHelp() {
+  openDetailModal('Ajuda', '<p class="tsub" style="margin-bottom:14px">Use <b>Restaurantes</b> para achar lugares, <b>Receitas</b> para cozinhar, <b>Mercado</b> para produtos e <b>Comunidade</b> para trocar dicas. Tem dúvida sobre veganismo? A Elo responde.</p>' + menuList([['🌿', "closeDetailModal();openChat()", 'Perguntar à Elo']]));
+}
+function openNotifs() { openDetailModal('Notificações', emptyState('Você ainda não tem notificações', '🔔') + '<p class="tsub" style="text-align:center">Avisos de curtidas e comentários vão aparecer aqui quando esse recurso for ativado.</p>'); }
+function updateHeaderAvatar() { var b = document.getElementById('headerAvatar'); if (b && state.user) b.textContent = state.user.avatar || '🌱'; }
