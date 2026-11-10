@@ -1455,3 +1455,52 @@ h1, h2, h3, h4, .section-title, .modal-header h3, .recipe-info h3, .name, .logo,
   .chat-fab { left: 276px; bottom: 28px; }
 }
 @media (prefers-reduced-motion: reduce) { .cat, .cat:hover { transition: none; transform: none; } }
+
+/* =====================================================================
+   v7.1 — fotos reais nos cartões e mais verde musgo (#A2A773)
+   O laranja continua na marca e nas ações principais, só que com menos presença.
+   ===================================================================== */
+:root { --moss: #5E6637; --on-moss: #FFFFFF; --moss-soft: rgba(94, 102, 55, .14); }
+[data-theme="dark"] { --moss: #A2A773; --on-moss: #241A18; --moss-soft: rgba(162, 167, 115, .16); --primary: #E9784F; }
+body { background: radial-gradient(1000px 520px at 50% -160px, rgba(233, 120, 79, .08), transparent 70%) fixed, radial-gradient(800px 460px at 100% 0, rgba(162, 167, 115, .09), transparent 70%) fixed, var(--bg); }
+
+/* musgo nas superfícies secundárias */
+.tbtn { background: var(--moss); color: var(--on-moss); }
+.tag.active, .tab.active { background: var(--moss); color: var(--on-moss); }
+.side-item.active { background: var(--moss); color: var(--on-moss); }
+.nav-item.active, [data-theme="dark"] .nav-item.active { color: var(--moss); background: var(--moss-soft); }
+.cico { background: var(--moss-soft); color: var(--moss); }
+.cat:hover { border-color: var(--moss); }
+.phead h3 svg { stroke: var(--moss); }
+.section-header .plink, .phead .plink, .auth-link, .more-link { color: var(--moss); }
+.badge-vegan { background: var(--moss-soft); color: var(--moss); }
+.t-post .tchip { background: var(--moss-soft); color: var(--moss); }
+.search-bar input:focus, .auth input:focus, .chat-form input:focus, .cmt-form input:focus { border-color: var(--moss); box-shadow: 0 0 0 4px var(--moss-soft); }
+.top-search:focus-within { border-color: var(--moss); }
+.chat-fab { background: var(--moss); color: var(--on-moss); box-shadow: 0 10px 26px rgba(0, 0, 0, .28); }
+.cb.me, .chat-form button { background: var(--moss); color: var(--on-moss); }
+.cmenu button:hover { border-color: var(--moss); }
+.auth { background: radial-gradient(700px 440px at 50% -60px, rgba(233, 120, 79, .22), transparent 70%), radial-gradient(520px 380px at 100% 100%, rgba(162, 167, 115, .2), transparent 70%), #241A18; }
+.hero { background: radial-gradient(480px 280px at 90% 40%, rgba(233, 120, 79, .2), transparent 70%), radial-gradient(420px 260px at 4% 108%, rgba(162, 167, 115, .24), transparent 70%), linear-gradient(135deg, #3A2823, #2A1D1A); }
+.hero-kicker { background: rgba(162, 167, 115, .18); color: #CDD1A0; }
+
+/* fotos */
+.hero-art-wrap { align-self: stretch; margin: -30px -26px -30px 0; }
+.hero-photo { display: block; width: 100%; height: 100%; min-height: 250px; object-fit: cover; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 34%); mask-image: linear-gradient(90deg, transparent 0, #000 34%); }
+.tcover { overflow: hidden; background: linear-gradient(135deg, #5a463e, #3b2b27); }
+.tcover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+@media (hover: hover) { .tcard:hover .tcover img { transform: scale(1.04); } }
+.tcover .tchip, .tcover .fav-btn, .tcover .tillus { z-index: 2; }
+.tillus { position: absolute; left: 10px; bottom: 10px; padding: 3px 9px; border-radius: 999px; background: rgba(36, 26, 24, .66); color: #F4E7D8; font: 600 .66rem 'Inter', sans-serif; backdrop-filter: blur(4px); }
+.cthumb { width: 48px; height: 48px; margin-left: auto; flex-shrink: 0; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); }
+.cats-d .cat { padding-right: 10px; }
+.recipe-thumb { overflow: hidden; }
+.recipe-thumb img { display: block; }
+.rd-hero { position: relative; height: 190px; margin-bottom: 14px; border-radius: 18px; overflow: hidden; background: var(--cream); }
+.rd-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+@media (max-width: 639px) {
+  .hero-art-wrap { margin: 0; }
+  .hero-photo { min-height: 0; height: auto; aspect-ratio: 1 / 1.05; border-radius: 22px 0 0 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .tcover img, .tcard:hover .tcover img { transition: none; transform: none; } }
