@@ -20,29 +20,79 @@
 body {
   background-color: var(--bg-color);
   color: var(--text-main);
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
 }
 
+/* Botão Flutuante no canto inferior direito */
+.chat-toggle-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  transition: transform 0.2s, background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-toggle-btn:hover {
+  transform: scale(1.08);
+  background-color: var(--primary-hover);
+}
+
+/* Overlay Transparente (Janela sobre o App) */
+.chat-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 24px;
+  z-index: 1000;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.chat-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Container do Chat estilo modal */
 .chat-container {
   width: 100%;
-  max-width: 480px;
-  height: 90vh;
+  max-width: 420px;
+  height: 80vh;
+  max-height: 650px;
   background-color: var(--card-bg);
-  border-radius: 16px;
+  border-radius: 20px;
   border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 
 .chat-header {
   padding: 16px;
   background-color: var(--bg-color);
   border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .bot-info {
@@ -52,7 +102,7 @@ body {
 }
 
 .bot-avatar {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   background: var(--border-color);
   padding: 8px;
   border-radius: 50%;
@@ -66,6 +116,23 @@ body {
 .bot-info small {
   color: var(--text-muted);
   font-size: 0.8rem;
+}
+
+/* Botão de Fechar "✕" */
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.close-btn:hover {
+  color: var(--text-main);
+  background-color: var(--border-color);
 }
 
 .chat-messages {

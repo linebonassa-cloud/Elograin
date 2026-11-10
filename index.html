@@ -8,33 +8,42 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="chat-container">
-    <header class="chat-header">
-      <div class="bot-info">
-        <span class="bot-avatar">🌿</span>
-        <div>
-          <h1>Elo</h1>
-          <small>Assistente Vegana Elograin</small>
+
+  <!-- Botão Flutuante para abrir/fechar o chat -->
+  <button id="chatToggleBtn" class="chat-toggle-btn" aria-label="Abrir assistente">🌿</button>
+
+  <!-- Overlay da Janela do Chat (inicia oculto sobre o app) -->
+  <div class="chat-overlay hidden" id="chatOverlay">
+    <div class="chat-container">
+      <header class="chat-header">
+        <div class="bot-info">
+          <span class="bot-avatar">🌿</span>
+          <div>
+            <h1>Elo</h1>
+            <small>Assistente Vegana Elograin</small>
+          </div>
+        </div>
+        <!-- Botão para fechar o chat -->
+        <button id="closeChatBtn" class="close-btn" aria-label="Fechar assistente">✕</button>
+      </header>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="message bot-message">
+          Olá! Eu sou a Elo 🌿 Como posso te ajudar hoje com receitas, substituições ou dicas sobre o estilo de vida vegano?
         </div>
       </div>
-    </header>
 
-    <div class="chat-messages" id="chatMessages">
-      <div class="message bot-message">
-        Olá! Eu sou a Elo 🌿 Como posso te ajudar hoje com receitas, substituições ou dicas sobre o estilo de vida vegano?
+      <div class="chat-suggestions" id="chatSuggestions">
+        <button onclick="sendSuggestion('Como substituir ovo em bolos?')">Como substituir ovo?</button>
+        <button onclick="sendSuggestion('Ideia de jantar rápido e vegano')">Jantar rápido</button>
+        <button onclick="sendSuggestion('Dicas para analisar rótulos')">Analisar rótulos</button>
       </div>
-    </div>
 
-    <div class="chat-suggestions" id="chatSuggestions">
-      <button onclick="sendSuggestion('Como substituir ovo em bolos?')">Como substituir ovo?</button>
-      <button onclick="sendSuggestion('Ideia de jantar rápido e vegano')">Jantar rápido</button>
-      <button onclick="sendSuggestion('Dicas para analisar rótulos')">Analisar rótulos</button>
+      <form class="chat-input-area" id="chatForm">
+        <input type="text" id="userInput" placeholder="Escreva sua pergunta..." autocomplete="off" required>
+        <button type="submit" id="sendBtn">➤</button>
+      </form>
     </div>
-
-    <form class="chat-input-area" id="chatForm">
-      <input type="text" id="userInput" placeholder="Escreva sua pergunta..." autocomplete="off" required>
-      <button type="submit" id="sendBtn">➤</button>
-    </form>
   </div>
 
   <script src="photos.js"></script>

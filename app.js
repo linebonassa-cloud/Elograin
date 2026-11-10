@@ -77,3 +77,22 @@ chatForm.addEventListener('submit', (e) => {
 function sendSuggestion(text) {
   handleUserMessage(text);
 }
+
+// Controle de Abrir e Fechar o Chat Overlay
+const chatOverlay = document.getElementById('chatOverlay');
+const chatToggleBtn = document.getElementById('chatToggleBtn');
+const closeChatBtn = document.getElementById('closeChatBtn');
+
+function toggleChat() {
+  chatOverlay.classList.toggle('hidden');
+}
+
+chatToggleBtn.addEventListener('click', toggleChat);
+closeChatBtn.addEventListener('click', toggleChat);
+
+// Fechar ao clicar fora da caixa do chat
+chatOverlay.addEventListener('click', (e) => {
+  if (e.target === chatOverlay) {
+    toggleChat();
+  }
+});
