@@ -1357,13 +1357,30 @@ var LOGO_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradien
 var chat = { msgs: [], busy: false, err: '', built: false };
 var CHAT_SUGS = ['Como substituir ovo em um bolo?', 'O que costuma ter origem animal nos rótulos?', 'Ideia de jantar rápido e barato', 'Como garantir vitamina B12?'];
 
+
+// Respostas automáticas básicas: usadas só quando o servidor da IA ainda não está ativado (a conversa nunca fica muda)
+var ELO_RULES = [
+  [/\b(oi|ol[aá]|bom dia|boa tarde|boa noite)\b/, 'Oi! Eu sou a Elo 🌿 Posso ajudar com receitas, substituições de ingredientes, rótulos e dicas para quem é vegano ou está começando.'],
+  [/\bovo/, 'Para substituir ovo: em bolos, 1 banana amassada ou 1 colher (sopa) de linhaça moída com 3 colheres de água por ovo. Para clara em neve, use aquafaba (a água do grão-de-bico). Em preparos salgados, tofu amassado funciona bem.'],
+  [/\bleite|aveia|castanha|am[eê]ndoa/, 'Leites vegetais de aveia, castanha de caju, amêndoas ou soja funcionam em doces e salgados. Para receitas salgadas, prefira os sem açúcar.'],
+  [/queijo/, 'Queijo vegano caseiro: castanha de caju hidratada batida com limão, sal e levedura nutricional. Nos mercados, confira sempre se o rótulo diz vegano.'],
+  [/\bmel\b/, 'Substitutos do mel: melado de cana, xarope de bordo ou agave. Lembre que mel é de origem animal.'],
+  [/gelatina|ágar|agar/, 'No lugar da gelatina (origem animal), use ágar-ágar: ferva 1 colher (chá) em 250 ml de líquido por 2 minutos e deixe firmar.'],
+  [/r[oó]tulo|ingrediente|caste[ií]na|carmim|origem animal/, 'Ingredientes de origem animal comuns em rótulos: caseína, soro de leite, gelatina, albumina, carmim (E120), mel, banha e alguns corantes. Em dúvida, consulte o fabricante.'],
+  [/b12|ferro|prote[ií]na|c[aá]lcio|suplement|nutri/, 'Quem é vegano deve cuidar principalmente de vitamina B12 (suplementação costuma ser necessária), ferro, cálcio, ômega-3 e proteínas. Dose e suplementos devem ser orientados por nutricionista ou médico.'],
+  [/receita|almo[cç]o|jantar|lanche|sobremesa|bolo/, 'Ideia rápida: estrogonofe de cogumelos com creme de castanha de caju, ou um bowl de grão-de-bico com legumes assados. Na aba Receitas você encontra e compartilha receitas da comunidade.'],
+  [/restaurante|onde|mercado|padaria|loja/, 'Para achar restaurantes e lojas veganas, use a aba Restaurantes (Explorar). Lá você vê o mapa, os horários e os contatos dos estabelecimentos.']
+];
+function eloFallback(text) {
+  var q = String(text || '').toLowerCase();
+  for (var i = 0; i < ELO_RULES.length; i++) { if (ELO_RULES[i][0].test(q)) return ELO_RULES[i][1]; }
+  return 'Posso ajudar com receitas, substituições, rótulos e dicas veganas. Tente perguntar, por exemplo: "como substituir ovo?" ou "o que tem origem animal nos rótulos?".';
+}
+
 function fmtChat(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
 
 function buildChat() {
   if (chat.built) return; chat.built = true;
-  var fab = document.createElement('button');
-  fab.id = 'chatFab'; fab.className = 'chat-fab'; fab.setAttribute('aria-label', 'Conversar com a Elo');
-  fab.innerHTML = '<span aria-hidden="true">🌿</span> Elo'; fab.onclick = openChat;
   var box = document.createElement('div');
   box.id = 'chatBox'; box.className = 'chat-box'; box.hidden = true;
   box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Chat com a Elo');
@@ -1374,19 +1391,17 @@ function buildChat() {
     '<form class="chat-form" onsubmit="sendChat(event)"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Pergunte sobre receitas, rótulos..." aria-label="Mensagem">' +
     '<button type="submit" id="chatSend" aria-label="Enviar">➤</button></form>' +
     '<p class="chat-note">A Elo é uma IA e pode errar. Não substitui nutricionista ou médico.</p>';
-  document.body.appendChild(fab); document.body.appendChild(box);
+  document.body.appendChild(box);
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeChat(); });
   renderChat();
 }
 function openChat() {
-  if (!sb || !cloud.user) { toast('Entre na sua conta para falar com a Elo.'); return; }
   document.getElementById('chatBox').hidden = false;
-  document.getElementById('chatFab').style.display = 'none';
   setTimeout(function() { document.getElementById('chatInput').focus(); }, 100);
 }
 function closeChat() {
   var b = document.getElementById('chatBox'); if (!b || b.hidden) return;
-  b.hidden = true; document.getElementById('chatFab').style.display = '';
+  b.hidden = true;
 }
 function resetChat() { chat.msgs = []; chat.err = ''; renderChat(); }
 
@@ -1409,8 +1424,11 @@ function sendChat(e) {
 function askChat(text) {
   text = (text || '').trim();
   if (!text || chat.busy) return;
-  if (!sb || !cloud.user) { toast('Entre na sua conta para falar com a Elo.'); return; }
   chat.msgs.push({ role: 'user', content: text.slice(0, 500) });
+  if (!sb || !cloud.user) {   // sem sessão: resposta básica, sem bloquear o chat
+    chat.msgs.push({ role: 'assistant', content: eloFallback(text) + '\n\n(Resposta automática básica. Entre na sua conta para usar a IA completa da Elo.)' });
+    chat.err = ''; renderChat(); return;
+  }
   chat.busy = true; chat.err = ''; renderChat();
   sb.auth.getSession().then(function(r) {
     var s = r.data && r.data.session;
@@ -1422,14 +1440,16 @@ function askChat(text) {
     });
   }).then(function(res) {
     return res.json().catch(function() { return {}; }).then(function(d) {
-      if (res.status === 404) throw new Error('O chat ainda não foi ativado no servidor.');
+      if (res.status === 404 || res.status === 500 || res.status === 502 || res.status === 504) { var fe = new Error('fallback'); fe.fallback = true; throw fe; }
       if (!res.ok) throw new Error(d.error || 'Não foi possível responder agora.');
       return d;
     });
   }).then(function(d) {
     chat.msgs.push({ role: 'assistant', content: d.reply });
   }).catch(function(err) {
-    chat.err = (err && err.message && err.message !== 'Failed to fetch') ? err.message : 'Sem conexão. Confira sua internet e tente de novo.';
+    if ((err && err.fallback) || (err && err.message === 'Failed to fetch')) {
+      chat.msgs.push({ role: 'assistant', content: eloFallback(text) + '\n\n(Resposta automática básica: a IA completa da Elo ainda não está ativada no servidor.)' });
+    } else chat.err = (err && err.message) ? err.message : 'Não foi possível responder agora.';
   }).then(function() { chat.busy = false; renderChat(); });
 }
 document.addEventListener('DOMContentLoaded', buildChat);
