@@ -1401,10 +1401,25 @@ function renderChat() {
   document.getElementById('chatSend').disabled = chat.busy;
 }
 function sendChat(e) {
-  e.preventDefault();
-  var i = document.getElementById('chatInput'), t = i.value.trim();
+  if (e) e.preventDefault();
+  var i = document.getElementById('chatInput');
+  if (!i) return;
+  var t = i.value.trim();
   if (!t) return;
-  i.value = ''; askChat(t);
+  i.value = '';
+  
+  // Adiciona a mensagem do utilizador e chama o Gemini diretamente
+  chat.msgs.push({ sender: 'user', text: t });
+  renderChat();
+  
+  enviarMensagemElo(t).then(function(resposta) {
+    chat.msgs.push({ sender: 'elo', text: resposta });
+    renderChat();
+  }).catch(function() {
+    chat.msgs.push({ sender: 'elo', text: "Ops! Ocorreu um problema ao conectar com a Elo." });
+    renderChat();
+  });
+}
 }
 function askChat(text) {
   text = (text || '').trim();
