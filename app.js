@@ -1400,11 +1400,29 @@ function renderChat() {
   document.getElementById('chatSugs').innerHTML = chat.msgs.length ? '' : CHAT_SUGS.map(function(s) { return '<button type="button" onclick="askChat(this.textContent)">' + esc(s) + '</button>'; }).join('');
   document.getElementById('chatSend').disabled = chat.busy;
 }
-function sendChat(e) {
-  e.preventDefault();
-  var i = document.getElementById('chatInput'), t = i.value.trim();
-  if (!t) return;
-  i.value = ''; askChat(t);
+async function sendChat(e) {
+  if (e) e.preventDefault();
+  var input = document.getElementById('chatInput');
+  if (!input) return;
+  var txt = input.value.trim();
+  if (!txt || chat.busy) return;
+
+  chat.msgs.push({ sender: 'user', text: txt });
+  input.value = '';
+  chat.busy = true;
+  chat.err = '';
+  renderChat();
+
+  try {
+    var resposta = await enviarMensagemElo(txt);
+    chat.msgs.push({ sender: 'elo', text: resposta });
+  } catch (err) {
+    chat.err = "Não foi possível responder agora.";
+  } finally {
+    chat.busy = false;
+    renderChat();
+  }
+}
 }
 function askChat(text) {
   text = (text || '').trim();
@@ -1494,6 +1512,38 @@ function placeCard(p) {
   return tcard('t-rest', 'Restaurante', 'pin', favBtn('p:' + p.id) + photo(placePhotoName(p), 'Foto ilustrativa de ' + cat.toLowerCase()),
     '<h3>' + esc(p.name) + '</h3><p class="tmeta">' + esc(cat) + ' · ' + esc(p.type) + '</p>' + (p.hours ? '<p class="tsub">🕒 ' + esc(p.hours) + '</p>' : '<p class="tsub">' + esc(p.address) + '</p>') +
     '<button class="tbtn" onclick="showPlaceDetail(' + p.id + ')">' + ic('pin') + ' Ver no mapa</button>');
+}
+// ====== INTEGRAÇÃO DIRETA COM O GEMINI ======
+const GEMINI_API_KEY = "AQ.Ab8RN6J3WMgP231LHPrF_54GFaiMCAFJOtBA2Fm-64dnqOVhoA";
+
+async function enviarMensagemElo(mensagemUsuario) {
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Você é a Elo, assistente virtual vegana do app Elograin. Responda de forma acolhedora, objetiva e útil em português sobre receitas veganas, substituição de ingredientes e produtos sem crueldade. Pergunta: ${mensagemUsuario}`
+            }]
+          }]
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    } else {
+      return "Não consegui gerar uma resposta no momento. Tente novamente!";
+    }
+  } catch (erro) {
+    console.error("Erro na Elo:", erro);
+    return "Ops! Ocorreu um problema ao conectar com a Elo.";
+  }
 }
 function recipeCard(r) {
   var rt = r.reviews ? '<span>⭐ ' + r.rating + ' (' + r.reviews + ')</span>' : '<span>Nova receita</span>';
