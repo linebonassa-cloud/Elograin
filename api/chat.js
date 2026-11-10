@@ -1,4 +1,38 @@
-// Função do servidor (Vercel): conversa com a Claude em nome do app.
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Método não permitido' });
+  }
+
+  const { message } = req.body;
+
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'O chat ainda não foi configurado no servidor.' });
+  }
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Você é a Elo, assistente virtual vegana do app Elograin. Responda de forma acolhedora, objetiva e útil sobre receitas veganas, substituições de ingredientes, restaurantes e marcas cruelty-free. Pergunta do usuário: ${message}`
+            }]
+          }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Desculpe, não consegui responder agora.';
+
+    return res.status(200).json({ reply });
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro ao processar resposta no servidor.' });
+  }
+}// Função do servidor (Vercel): conversa com a Claude em nome do app.
 // A chave ANTHROPIC_API_KEY fica nas variáveis de ambiente do Vercel, nunca no código do app.
 
 const SUPABASE_URL = 'https://lkbuejiqkjocmcdqcyxv.supabase.co';
