@@ -1400,11 +1400,29 @@ function renderChat() {
   document.getElementById('chatSugs').innerHTML = chat.msgs.length ? '' : CHAT_SUGS.map(function(s) { return '<button type="button" onclick="askChat(this.textContent)">' + esc(s) + '</button>'; }).join('');
   document.getElementById('chatSend').disabled = chat.busy;
 }
-function sendChat(e) {
-  e.preventDefault();
-  var i = document.getElementById('chatInput'), t = i.value.trim();
-  if (!t) return;
-  i.value = ''; askChat(t);
+async function sendChat(e) {
+  if (e) e.preventDefault();
+  var input = document.getElementById('chatInput');
+  if (!input) return;
+  var txt = input.value.trim();
+  if (!txt || chat.busy) return;
+
+  chat.msgs.push({ role: 'user', text: txt });
+  input.value = '';
+  chat.busy = true;
+  chat.err = '';
+  renderChat();
+
+  try {
+    var reply = await enviarMensagemElo(txt);
+    chat.msgs.push({ role: 'assistant', text: reply });
+  } catch (err) {
+    chat.err = err.message || 'Não foi possível responder agora.';
+  } finally {
+    chat.busy = false;
+    renderChat();
+  }
+}
 }
 function askChat(text) {
   text = (text || '').trim();
