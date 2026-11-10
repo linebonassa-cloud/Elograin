@@ -639,7 +639,7 @@ function renderRecipes() {
 
   container.innerHTML = recipes.map(function(r) {
     return '<article class="recipe-card" onclick="showRecipeDetail(' + r.id + ')">' +
-      '<div class="recipe-thumb"><img src="img/' + recipePhotoName(r) + '.jpg" alt="" loading="lazy"></div>' +
+      '<div class="recipe-thumb"><img src="' + photoSrc(recipePhotoName(r)) + '" alt="" loading="lazy"></div>' +
       '<div class="recipe-info"><h3>' + r.title + '</h3>' +
       '<div class="recipe-meta"><div class="rating"><span class="stars">⭐</span> ' + r.rating + ' (' + r.reviews + ')</div>' +
       '<div style="margin-top:4px">⏱️ ' + r.time + ' • 👤 ' + r.author + '</div>' +
@@ -1438,12 +1438,13 @@ document.addEventListener('DOMContentLoaded', buildChat);
 var ICO = {"home": "<path d=\"M3 11.5 12 4l9 7.5\"/><path d=\"M5.5 10v9.5h13V10\"/><path d=\"M10 19.5v-5h4v5\"/>", "food": "<path d=\"M7 3v7a2.5 2.5 0 0 0 5 0V3M9.5 3v18\"/><path d=\"M17 3c-2.2 1.8-3 4.5-3 8h3v10\"/>", "bread": "<path d=\"M4 11a8 6 0 0 1 16 0v1H4z\"/><path d=\"M5.5 12v6.5h13V12\"/>", "bag": "<path d=\"M5 8.5h14l-1.1 11.5H6.1z\"/><path d=\"M9 8.5V7a3 3 0 0 1 6 0v1.5\"/>", "bowl": "<path d=\"M3 12h18a9 9 0 0 1-18 0z\"/><path d=\"M8.5 8.5c-.8-1 .8-2 0-3M12.5 8.5c-.8-1 .8-2 0-3M16.5 8.5c-.8-1 .8-2 0-3\"/>", "heart": "<path d=\"M12 20s-7.5-4.6-9.2-9.4A5 5 0 0 1 12 7.6a5 5 0 0 1 9.2 3C19.5 15.4 12 20 12 20z\"/>", "people": "<circle cx=\"9\" cy=\"8\" r=\"3\"/><path d=\"M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6\"/><circle cx=\"17\" cy=\"9\" r=\"2.4\"/><path d=\"M17 14c2.5 0 4.5 2 4.5 4.5\"/>", "leaf": "<path d=\"M5 19c0-8 5-13 14-14 0 9-5 14-14 14z\"/><path d=\"M5 19c3-4 6-7 10-9\"/>", "compass": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m15.6 8.4-2 5.2-5.2 2 2-5.2z\"/>", "user": "<circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8\"/>", "pin": "<path d=\"M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z\"/><circle cx=\"12\" cy=\"9.5\" r=\"2.5\"/>", "search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/>", "arrow": "<path d=\"M5 12h14M13 6l6 6-6 6\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8\"/>", "help": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17v.01\"/>", "out": "<path d=\"M9 4H5v16h4M16 8l4 4-4 4M20 12H9\"/>", "chat": "<path d=\"M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z\"/>", "bell": "<path d=\"M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z\"/><path d=\"M10 21h4\"/>", "plus": "<path d=\"M12 5v14M5 12h14\"/>"};
 function ic(n) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (ICO[n] || '') + '</svg>'; }
 var PLACE_CAT = { restaurante: 'Restaurante', confeitaria: 'Confeitaria', padaria: 'Padaria', cafe: 'Cafeteria', lanchonete: 'Lanchonete', sorveteria: 'Sorveteria', mercado: 'Mercado', loja: 'Loja' };
-var HERO_SVG = '<img class="hero-photo" src="img/bowl-tofu.jpg" alt="Bowl vegano com tofu grelhado, abacate, tomate e grãos" width="338" height="270" decoding="async">';
+var HERO_SVG = '<img class="hero-photo" src="' + photoSrc('bowl-tofu') + '" alt="Bowl vegano com tofu grelhado, abacate, tomate e grãos" width="338" height="270" decoding="async">';
 
 
 // ----- fotos (recortes da colagem em img/; trocar por fotos do estabelecimento/autor quando houver envio de imagens) -----
 var PHOTO_ALT = 'Foto ilustrativa de prato vegano';
-function photo(name, alt) { return '<img src="img/' + name + '.jpg" alt="' + esc(alt || PHOTO_ALT) + '" loading="lazy" decoding="async"><span class="tillus">Foto ilustrativa</span>'; }
+function photoSrc(n) { return (window.PHOTOS && window.PHOTOS[n]) || ('img/' + n + '.jpg'); }
+function photo(name, alt) { return '<img src="' + photoSrc(name) + '" alt="' + esc(alt || PHOTO_ALT) + '" loading="lazy" decoding="async"><span class="tillus">Foto ilustrativa</span>'; }
 function recipePhotoName(r) {
   var t = String(r.title || '').toLowerCase();
   if (/brownie/.test(t)) return 'brownie'; if (/brigadeiro|bombom|trufa/.test(t)) return 'brigadeiros'; if (/bolo|torta/.test(t)) return 'bolo-chocolate';
@@ -1460,6 +1461,7 @@ document.addEventListener('error', function(e) {
   var t = e.target;
   if (!t || t.tagName !== 'IMG' || String(t.src).indexOf('/img/') === -1) return;
   t.style.display = 'none';
+  if (t.classList.contains('hero-photo') && t.parentNode) t.parentNode.classList.add('noimg');
   var chip = t.parentNode && t.parentNode.querySelector('.tillus'); if (chip) chip.style.display = 'none';
   console.warn('Foto não encontrada:', t.src);
 }, true);
@@ -1531,13 +1533,13 @@ function sidePanels() {
 function renderHome() {
   var D = [['food', 'Restaurantes e Lanchonetes', 'explore', 'bowl-graos'], ['bread', 'Padarias e Confeitarias', 'explore', 'croissant'], ['bag', 'Mercados e Lojas', 'consume', 'vegetais'], ['bowl', 'Receitas', 'recipes', 'macarrao'], ['heart', 'Relacionamentos', 'connect'], ['people', 'Comunidade', 'feed']];
   var M = [['food', 'Restaurantes', 'explore'], ['bowl', 'Receitas', 'recipes'], ['bag', 'Mercado', 'consume'], ['people', 'Comunidade', 'feed'], ['heart', 'Conexões', 'connect'], ['leaf', 'Mais', 'more']];
-  var cat = function(a) { return '<button class="cat" onclick="goTo(\'' + a[2] + '\')"><span class="cico">' + ic(a[0]) + '</span><span>' + a[1] + '</span>' + (a[3] ? '<img class="cthumb" src="img/' + a[3] + '.jpg" alt="" loading="lazy" width="48" height="48">' : '') + '</button>'; };
+  var cat = function(a) { return '<button class="cat" onclick="goTo(\'' + a[2] + '\')"><span class="cico">' + ic(a[0]) + '</span><span>' + a[1] + '</span>' + (a[3] ? '<img class="cthumb" src="' + photoSrc(a[3]) + '" alt="" loading="lazy" width="48" height="48">' : '') + '</button>'; };
   document.getElementById('homeContent').innerHTML =
     '<div class="home-grid"><div class="home-main">' +
     '<section class="hero"><div class="hero-copy"><span class="hero-kicker">Mais sabor. Mais conexões. Zero crueldade.</span>' +
     '<h1>Descubra, compartilhe e conecte-se com uma <em>vida 100% vegetal!</em></h1><p>Restaurantes, receitas, produtos e uma comunidade incrível te esperam aqui.</p></div>' +
     '<div class="hero-art-wrap">' + HERO_SVG + '</div>' +
-    '<form class="hero-search" onsubmit="heroSearch(event)"><label class="hs-loc">' + ic('pin') + '<input id="heroLoc" placeholder="Sua localização" aria-label="Localização" autocomplete="off"></label>' +
+    '<form class="hero-search" onsubmit="heroSearch(event)"><label class="hs-loc">' + ic('pin') + '<input id="heroLoc" placeholder="Sua cidade" aria-label="Localização" autocomplete="off"></label>' +
     '<label class="hs-q">' + ic('search') + '<input id="heroQ" placeholder="O que você procura?" aria-label="O que você procura?" autocomplete="off"></label>' +
     '<button type="submit" aria-label="Pesquisar">' + ic('arrow') + '</button></form></section>' +
     '<div class="cats cats-d">' + D.map(cat).join('') + '</div><div class="cats cats-m">' + M.map(cat).join('') + '</div>' +
