@@ -1,5 +1,5 @@
 // Substitua "SUA_CHAVE_AIZASY_AQUI" pela sua chave real do Google AI Studio
-const GEMINI_API_KEY = "SUA_CHAVE_AIZASY_AQUI";
+const GEMINI_API_KEY = AQ.Ab8RN6IeTfbQ5Sfd63fw7yep5nCxoerp3EudzlASPtxI2WrkEg;
 
 async function enviarMensagemElo(mensagemUsuario) {
   try {
