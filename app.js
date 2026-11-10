@@ -1,4 +1,4 @@
-// ELOGRAIN v7.3 - INTEGRAÇÃO COMPLETA DO APP E CHATBOT ELO
+// ELOGRAIN - INTEGRAÇÃO DO SUPERAPP E DA ASSISTENTE ELO
 
 document.addEventListener('DOMContentLoaded', () => {
   initNavigation();
@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initChatbot();
 });
 
-// 1. GERENCIAMENTO DE NAVEGAÇÃO POR ABAS
+// 1. NAVEGAÇÃO POR ABAS
 function initNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   const tabContents = document.querySelectorAll('.tab-content');
@@ -26,7 +26,7 @@ function initNavigation() {
   });
 }
 
-// 2. TEMA CLARO / ESCURO
+// 2. ALTERNÂNCIA DE TEMA
 function initThemeToggle() {
   const themeBtn = document.getElementById('theme-toggle');
   themeBtn.addEventListener('click', () => {
@@ -40,24 +40,22 @@ function initThemeToggle() {
   });
 }
 
-// 3. MAPA (LEAFLET INTEGRADO)
+// 3. NAVEGAÇÃO DE MAPA (LEAFLET)
 function initMap() {
   if (document.getElementById('map-container')) {
-    // Coordenadas padrão (ex: São Paulo / Santana de Parnaíba)
     const map = L.map('map-container').setView([-23.444, -46.918], 12);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Marcador de exemplo de estabelecimento vegano
     L.marker([-23.444, -46.918]).addTo(map)
       .bindPopup('<b>Padoca Vegan</b><br>Padaria e Confeitaria 100% Vegetal 🌱')
       .openPopup();
   }
 }
 
-// 4. FEED E COMUNIDADE
+// 4. FEED E PUBLICAÇÕES
 const posts = [
   { id: 1, author: 'Giovanna Duarte', tag: '#dicas', content: 'Dica de substituto para ovo em bolos: aquafaba de grão-de-bico fica excelente!' },
   { id: 2, author: 'Matheus Favero', tag: '#experiencias', content: 'Fui conhecer a nova opção vegana no centro da cidade, atendimento impecável.' }
@@ -123,11 +121,9 @@ function initChatbot() {
     const text = input.value.trim();
     if (!text) return;
 
-    // Mensagem do usuário
     appendMessage(text, 'user-msg');
     input.value = '';
 
-    // Resposta simulada da Elo
     setTimeout(() => {
       const botReply = getEloResponse(text);
       appendMessage(botReply, 'bot-msg');
