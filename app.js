@@ -1455,6 +1455,15 @@ function recipePhotoName(r) {
 }
 function placePhotoName(p) { return ({ restaurante: 'legumes', confeitaria: 'cheesecake', padaria: 'croissant', cafe: 'bolo-chocolate', lanchonete: 'hamburguer', sorveteria: 'smoothie', mercado: 'vegetais', loja: 'vegetais' })[p.category] || 'bowl-graos'; }
 
+// Se uma foto de img/ não carregar, esconde o ícone quebrado e o selo (o cartão continua bonito, só sem foto)
+document.addEventListener('error', function(e) {
+  var t = e.target;
+  if (!t || t.tagName !== 'IMG' || String(t.src).indexOf('/img/') === -1) return;
+  t.style.display = 'none';
+  var chip = t.parentNode && t.parentNode.querySelector('.tillus'); if (chip) chip.style.display = 'none';
+  console.warn('Foto não encontrada:', t.src);
+}, true);
+
 // ----- favoritos (salvos neste aparelho) -----
 function favKeys() { try { return JSON.parse(localStorage.getItem('elograin_favs') || '[]'); } catch (e) { return []; } }
 function isFav(k) { return favKeys().indexOf(k) > -1; }

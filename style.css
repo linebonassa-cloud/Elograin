@@ -1504,3 +1504,8 @@ body { background: radial-gradient(1000px 520px at 50% -160px, rgba(233, 120, 79
   .hero-photo { min-height: 0; height: auto; aspect-ratio: 1 / 1.05; border-radius: 22px 0 0 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .tcover img, .tcard:hover .tcover img { transition: none; transform: none; } }
+
+/* v7.2: atalhos de categoria com mais espaço */
+@media (min-width: 640px) and (max-width: 1499px) { .cats-d { grid-template-columns: repeat(3, 1fr); } }
+.cat span:nth-child(2) { min-width: 0; }
+.cthumb { width: 44px; height: 44px; }
