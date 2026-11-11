@@ -1523,3 +1523,21 @@ body { background: radial-gradient(1000px 520px at 50% -160px, rgba(233, 120, 79
 .chat-fab { display: none !important; }
 .elo-top { display: inline-flex; }
 @media (max-width: 639px) { .elo-top { padding: 0 12px; height: 38px; } .app-header .ver { display: none; } }
+
+/* ===== v7.5: Elo — listas, botões de ação, ferramentas, preferências e foto ===== */
+.cb ul { margin: 6px 0 6px 18px; padding: 0; } .cb li { margin: 2px 0; }
+.cb-img { display: block; max-width: 100%; max-height: 160px; margin-bottom: 8px; border-radius: 12px; object-fit: cover; }
+.cb-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; }
+.cb-act { padding: 8px 14px; border: 0; border-radius: 999px; background: var(--moss); color: var(--on-moss); font: 700 .8rem 'Inter', sans-serif; cursor: pointer; }
+.cb-act.ghost { background: var(--cream); color: var(--text); }
+.cb-note { display: block; margin: 0 0 4px 6px; color: var(--text-light); font-size: .72rem; }
+.cb-tools { display: flex; gap: 2px; margin: 0 0 8px 4px; }
+.cb-tools button { padding: 4px 8px; border: 0; border-radius: 8px; background: none; color: var(--text-light); font: 600 .74rem 'Inter', sans-serif; cursor: pointer; }
+.cb-tools button:hover, .cb-tools button.on { background: var(--cream); color: var(--text); }
+.cprefs { padding: 4px 2px; } .cprefs h4 { margin: 0 0 4px; font-size: 1rem; } .cprefs p { margin: 0 0 12px; color: var(--text-light); font-size: .82rem; }
+.cprefs label { display: block; margin-bottom: 12px; font-size: .8rem; font-weight: 700; }
+.cprefs select, .cprefs input { display: block; width: 100%; margin-top: 6px; padding: 11px 12px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--cream); color: var(--text); font-size: .95rem; }
+.cprefs-row { display: flex; gap: 8px; }
+.chat-cam { width: 46px; height: 46px; flex-shrink: 0; border: 1.5px solid var(--border); border-radius: 50%; background: var(--cream); font-size: 1.15rem; cursor: pointer; }
+.chat-form .chat-cam { background: var(--cream); color: var(--text); }
+@media (max-width: 639px) { .chat-box { height: 100dvh; max-width: none; border-radius: 0; border: 0; } }

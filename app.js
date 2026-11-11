@@ -1191,6 +1191,7 @@ function startSession(email, isNew) {
 }
 
 function logout() {
+  if (typeof stopTyping === 'function') { stopTyping(); chat.msgs = []; chat.loadedFor = null; closeChat(); }
   if (sb) { sb.auth.signOut(); cloud.user = null; state.posts = []; saveState(); }
   localStorage.removeItem('elograin_session');
   closePostMenus();
@@ -1354,11 +1355,16 @@ function submitRecovery() {
 // ===== CHAT COM A ELO (assistente de IA) =====
 // O app conversa com /api/chat (função no Vercel); a chave da IA nunca fica no navegador.
 var LOGO_SVG = '<svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="mgc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F0784E"/><stop offset="1" stop-color="#D99A58"/></linearGradient></defs><path d="M24 41C10 31 6 24 6 17.5 6 12.8 9.7 9 14.4 9c3.6 0 7 2.2 9.6 5.5C26.6 11.2 30 9 33.6 9 38.3 9 42 12.8 42 17.5 42 24 38 31 24 41z" fill="none" stroke="url(#mgc)" stroke-width="3.4" stroke-linejoin="round"/><path d="M22.5 31c0-7.5 4.5-12 12.5-13 0 8-4.5 12.5-12.5 13z" fill="url(#mgc)"/><path d="M23.5 30.5c3-3.5 6-6 9.5-8" stroke="#241A18" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>';
-var chat = { msgs: [], busy: false, err: '', built: false };
-var CHAT_SUGS = ['Como substituir ovo em um bolo?', 'O que costuma ter origem animal nos rótulos?', 'Ideia de jantar rápido e barato', 'Como garantir vitamina B12?'];
+var chat = { msgs: [], busy: false, err: '', built: false, loadedFor: null, prefsOpen: false, typing: -1, timer: null };
+var CHAT_SUGS = {
+  home: ['Como substituir ovo em um bolo?', 'O que costuma ter origem animal nos rótulos?', 'Ideia de jantar rápido e barato', 'Quais lugares veganos o app tem?'],
+  recipes: ['Sugira uma receita com grão-de-bico', 'Receita econômica para o jantar', 'Como substituir ovo em um bolo?', 'Uma sobremesa vegana fácil'],
+  explore: ['Quais lugares veganos o app tem?', 'O que perguntar ao restaurante?', 'Dicas para comer fora sendo vegano'],
+  consume: ['O que costuma ter origem animal nos rótulos?', 'Como ler um rótulo?', 'Substitutos para laticínios']
+};
+var HEALTH_RE = /b12|gr[aá]vid|gesta|crian[cç]a|beb[eê]|rem[eé]dio|medicament|suplement|anemia|doen[cç]a|diabet|press[aã]o/i;
 
-
-// Respostas automáticas básicas: usadas só quando o servidor da IA ainda não está ativado (a conversa nunca fica muda)
+// ----- respostas automáticas básicas (quando a IA do servidor não está disponível) -----
 var ELO_RULES = [
   [/\b(oi|ol[aá]|bom dia|boa tarde|boa noite)\b/, 'Oi! Eu sou a Elo 🌿 Posso ajudar com receitas, substituições de ingredientes, rótulos e dicas para quem é vegano ou está começando.'],
   [/\bovo/, 'Para substituir ovo: em bolos, 1 banana amassada ou 1 colher (sopa) de linhaça moída com 3 colheres de água por ovo. Para clara em neve, use aquafaba (a água do grão-de-bico). Em preparos salgados, tofu amassado funciona bem.'],
@@ -1368,89 +1374,282 @@ var ELO_RULES = [
   [/gelatina|ágar|agar/, 'No lugar da gelatina (origem animal), use ágar-ágar: ferva 1 colher (chá) em 250 ml de líquido por 2 minutos e deixe firmar.'],
   [/r[oó]tulo|ingrediente|caste[ií]na|carmim|origem animal/, 'Ingredientes de origem animal comuns em rótulos: caseína, soro de leite, gelatina, albumina, carmim (E120), mel, banha e alguns corantes. Em dúvida, consulte o fabricante.'],
   [/b12|ferro|prote[ií]na|c[aá]lcio|suplement|nutri/, 'Quem é vegano deve cuidar principalmente de vitamina B12 (suplementação costuma ser necessária), ferro, cálcio, ômega-3 e proteínas. Dose e suplementos devem ser orientados por nutricionista ou médico.'],
-  [/receita|almo[cç]o|jantar|lanche|sobremesa|bolo/, 'Ideia rápida: estrogonofe de cogumelos com creme de castanha de caju, ou um bowl de grão-de-bico com legumes assados. Na aba Receitas você encontra e compartilha receitas da comunidade.'],
-  [/restaurante|onde|mercado|padaria|loja/, 'Para achar restaurantes e lojas veganas, use a aba Restaurantes (Explorar). Lá você vê o mapa, os horários e os contatos dos estabelecimentos.']
+  [/restaurante|onde|mercado|padaria|loja|lugar|comer fora/, function() {
+    var pl = placesReal().slice(0, 5);
+    return pl.length ? 'Estes lugares estão cadastrados no Elograin:\n' + pl.map(function(p) { return '- ' + p.name + ' (' + (PLACE_CAT[p.category] || p.type) + ') [[lugar:' + p.id + ']]'; }).join('\n') + '\nVeja todos na aba Restaurantes.'
+      : 'Veja os estabelecimentos na aba Restaurantes (Explorar), com mapa, horários e contatos.';
+  }],
+  [/receita|almo[cç]o|jantar|lanche|sobremesa|bolo/, 'Ideia rápida: estrogonofe de cogumelos com creme de castanha de caju, ou um bowl de grão-de-bico com legumes assados. Na aba Receitas você encontra e compartilha receitas da comunidade.']
 ];
 function eloFallback(text) {
   var q = String(text || '').toLowerCase();
-  for (var i = 0; i < ELO_RULES.length; i++) { if (ELO_RULES[i][0].test(q)) return ELO_RULES[i][1]; }
+  for (var i = 0; i < ELO_RULES.length; i++) {
+    if (ELO_RULES[i][0].test(q)) { var r = ELO_RULES[i][1]; return typeof r === 'function' ? r() : r; }
+  }
   return 'Posso ajudar com receitas, substituições, rótulos e dicas veganas. Tente perguntar, por exemplo: "como substituir ovo?" ou "o que tem origem animal nos rótulos?".';
 }
 
-function fmtChat(t) { return esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>'); }
+// ----- formatação segura: negrito e listas, sem HTML vindo da IA -----
+function fmtChat(t) {
+  var lines = esc(t).split('\n'), out = [], inList = false;
+  lines.forEach(function(l) {
+    var m = l.match(/^\s*(?:[-•*]|\d+[.)])\s+(.*)$/);
+    if (m) { if (!inList) { out.push('<ul>'); inList = true; } out.push('<li>' + m[1] + '</li>'); }
+    else { if (inList) { out.push('</ul>'); inList = false; } out.push(l === '' ? '<br>' : l + '<br>'); }
+  });
+  if (inList) out.push('</ul>');
+  return out.join('').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(<br>){3,}/g, '<br><br>').replace(/(<br>)+$/, '');
+}
+// marcas [[lugar:ID]] / [[receita:ID]] viram botões (só se o item existir de verdade no app)
+function extractActions(text) {
+  var acts = [], seen = {};
+  var clean = String(text).replace(/\s*\[\[(lugar|receita):(\d+)\]\]/g, function(m, t, id) {
+    id = +id; var k = t + id;
+    if (!seen[k]) {
+      seen[k] = 1;
+      if (t === 'lugar' && (state.places || []).some(function(p) { return p.id === id; })) acts.push({ t: t, id: id });
+      if (t === 'receita' && realRecipes().some(function(r) { return r.id === id; })) acts.push({ t: t, id: id });
+    }
+    return '';
+  });
+  return { text: clean.trim(), actions: acts };
+}
+// receita completa na resposta -> botão "Salvar como receita"
+function parseRecipe(text) {
+  var t = String(text).replace(/\r/g, '');
+  var m = t.match(/ingredientes[\s:*]*\n([\s\S]*?)\n[\s*#]*modo de preparo[\s:*]*\n([\s\S]+)/i);
+  if (!m) return null;
+  var lines = function(block) { return block.split('\n').map(function(l) { return l.replace(/^\s*(?:[-•*]|\d+[.)])\s*/, '').replace(/\*\*/g, '').trim(); }).filter(function(l) { return l && !/^\(.*\)$/.test(l); }); };
+  var ing = lines(m[1]), steps = lines(m[2]).filter(function(l) { return !/^(dica|observa|obs)/i.test(l); });
+  if (ing.length < 2 || steps.length < 2) return null;
+  var head = t.slice(0, t.search(/ingredientes/i));
+  var bold = head.match(/\*\*([^*\n]{3,80})\*\*/);
+  var first = head.split('\n').map(function(l) { return l.replace(/\*\*/g, '').replace(/^#+\s*/, '').trim(); }).filter(Boolean)[0];
+  var title = String(bold ? bold[1] : (first || 'Receita da Elo')).replace(/[:.]$/, '').slice(0, 80);
+  var tm = t.match(/(\d+\s*(?:min(?:utos)?|h(?:oras?)?))/i);
+  return { title: title, time: tm ? tm[1] : '', ingredients: ing, steps: steps };
+}
 
+// ----- histórico e preferências (neste aparelho, por conta) -----
+function chatKey() { return cloud.user ? 'elograin_elo_chat_' + cloud.user.id : null; }
+function loadChat() {
+  var k = chatKey(); if (!k || chat.loadedFor === k) return;
+  chat.loadedFor = k; chat.msgs = [];
+  try { chat.msgs = JSON.parse(localStorage.getItem(k) || '[]').filter(function(m) { return m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string'; }).slice(-30); } catch (e) {}
+}
+function saveChat() {
+  var k = chatKey(); if (!k) return;
+  try { localStorage.setItem(k, JSON.stringify(chat.msgs.slice(-30).map(function(m) { return { role: m.role, content: m.content }; }))); } catch (e) {}
+}
+function prefsKey() { return 'elograin_elo_prefs_' + (cloud.user ? cloud.user.id : 'anon'); }
+function getPrefs() { try { return JSON.parse(localStorage.getItem(prefsKey()) || '{}'); } catch (e) { return {}; } }
+function togglePrefs() { chat.prefsOpen = !chat.prefsOpen; renderChat(); }
+function savePrefs() {
+  var p = { diet: document.getElementById('cpDiet').value, budget: document.getElementById('cpBudget').value, allergies: document.getElementById('cpAllergy').value.trim().slice(0, 80) };
+  try { localStorage.setItem(prefsKey(), JSON.stringify(p)); } catch (e) {}
+  chat.prefsOpen = false; toast('Preferências salvas'); renderChat();
+}
+// dados reais do app que a IA pode citar (nada inventado)
+function chatContext() {
+  return {
+    places: placesReal().slice(0, 20).map(function(p) { return { id: p.id, name: p.name, category: PLACE_CAT[p.category] || p.type, address: p.address, hours: p.hours || '', vegan: p.type }; }),
+    recipes: realRecipes().slice(0, 20).map(function(r) { return { id: r.id, title: r.title, author: r.author, time: r.time }; })
+  };
+}
+
+// ----- interface -----
 function buildChat() {
   if (chat.built) return; chat.built = true;
   var box = document.createElement('div');
   box.id = 'chatBox'; box.className = 'chat-box'; box.hidden = true;
   box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Chat com a Elo');
   box.innerHTML = '<div class="chat-head"><div class="chat-av">' + LOGO_SVG + '</div><div class="chat-title"><b>Elo</b><small>Assistente vegana do Elograin</small></div>' +
+    '<button class="chat-x" onclick="togglePrefs()" aria-label="Minhas preferências" title="Minhas preferências">⚙</button>' +
     '<button class="chat-x" onclick="resetChat()" aria-label="Nova conversa" title="Nova conversa">↺</button>' +
     '<button class="chat-x" onclick="closeChat()" aria-label="Fechar">✕</button></div>' +
     '<div class="chat-msgs" id="chatMsgs" aria-live="polite"></div><div class="chat-sugs" id="chatSugs"></div>' +
-    '<form class="chat-form" onsubmit="sendChat(event)"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Pergunte sobre receitas, rótulos..." aria-label="Mensagem">' +
+    '<form class="chat-form" onsubmit="sendChat(event)"><button type="button" class="chat-cam" onclick="pickLabelPhoto()" aria-label="Enviar foto de um rótulo" title="Foto do rótulo">📷</button>' +
+    '<input id="chatInput" maxlength="500" autocomplete="off" placeholder="Pergunte sobre receitas, rótulos..." aria-label="Mensagem">' +
     '<button type="submit" id="chatSend" aria-label="Enviar">➤</button></form>' +
+    '<input type="file" id="chatFile" accept="image/*" hidden onchange="onLabelFile(event)">' +
     '<p class="chat-note">A Elo é uma IA e pode errar. Não substitui nutricionista ou médico.</p>';
   document.body.appendChild(box);
   document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeChat(); });
   renderChat();
 }
 function openChat() {
+  loadChat(); chat.prefsOpen = false; renderChat();
   document.getElementById('chatBox').hidden = false;
   setTimeout(function() { document.getElementById('chatInput').focus(); }, 100);
 }
-function closeChat() {
-  var b = document.getElementById('chatBox'); if (!b || b.hidden) return;
-  b.hidden = true;
+function closeChat() { var b = document.getElementById('chatBox'); if (b && !b.hidden) b.hidden = true; }
+function resetChat() {
+  stopTyping(); chat.msgs = []; chat.err = ''; chat.prefsOpen = false;
+  var k = chatKey(); if (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  renderChat();
 }
-function resetChat() { chat.msgs = []; chat.err = ''; renderChat(); }
+function chatSugsNow() { return CHAT_SUGS[state.currentView] || CHAT_SUGS.home; }
 
+function msgHTML(m, i, isLast) {
+  if (m.role === 'user') return '<div class="cb me">' + (m.img ? '<img class="cb-img" src="' + m.img + '" alt="Foto enviada">' : '') + fmtChat(m.content) + '</div>';
+  if (i === chat.typing) return '<div class="cb bot" id="cb-' + i + '"></div>';
+  var x = extractActions(m.content), btns = [];
+  x.actions.forEach(function(a) {
+    btns.push(a.t === 'lugar' ? '<button class="cb-act" onclick="closeChat();showPlaceDetail(' + a.id + ')">📍 Ver no mapa</button>' : '<button class="cb-act" onclick="closeChat();showRecipeDetail(' + a.id + ')">🍽️ Ver receita</button>');
+  });
+  if (parseRecipe(x.text)) btns.push('<button class="cb-act" onclick="useChatRecipe(' + i + ')">✍️ Salvar como receita</button>');
+  var prev = chat.msgs[i - 1], note = (prev && HEALTH_RE.test(prev.content)) ? '<small class="cb-note">Informação geral. Para decisões de saúde, consulte nutricionista ou médico.</small>' : '';
+  var tools = '<button onclick="copyChat(' + i + ')" aria-label="Copiar resposta">⧉ Copiar</button>' +
+    '<button class="' + (m.fb === 'up' ? 'on' : '') + '" onclick="rateChat(' + i + ',\'up\')" aria-label="Resposta boa">👍</button>' +
+    '<button class="' + (m.fb === 'down' ? 'on' : '') + '" onclick="rateChat(' + i + ',\'down\')" aria-label="Resposta ruim">👎</button>' +
+    (isLast ? '<button onclick="regenChat()" aria-label="Refazer resposta">↻ Refazer</button>' : '');
+  return '<div class="cb bot" id="cb-' + i + '">' + fmtChat(x.text) + '</div>' + (btns.length ? '<div class="cb-row">' + btns.join('') + '</div>' : '') + note + '<div class="cb-tools">' + tools + '</div>';
+}
 function renderChat() {
-  var list = document.getElementById('chatMsgs');
-  var html = '<div class="cb bot">Oi! Eu sou a Elo 🌿 Posso ajudar com receitas, substituições, dúvidas de rótulos e dicas para quem é vegano ou está começando. Como posso ajudar?</div>';
-  html += chat.msgs.map(function(m) { return '<div class="cb ' + (m.role === 'user' ? 'me' : 'bot') + '">' + fmtChat(m.content) + '</div>'; }).join('');
+  var list = document.getElementById('chatMsgs'); if (!list) return;
+  if (chat.prefsOpen) {
+    var p = getPrefs(), sel = function(a, b) { return a === b ? ' selected' : ''; };
+    list.innerHTML = '<div class="cprefs"><h4>Suas preferências</h4><p>A Elo usa isso para personalizar as respostas. Fica salvo só neste aparelho.</p>' +
+      '<label>Alimentação<select id="cpDiet"><option value="">Prefiro não informar</option><option value="vegano"' + sel(p.diet, 'vegano') + '>Vegana</option><option value="vegetariano"' + sel(p.diet, 'vegetariano') + '>Vegetariana</option><option value="transicao"' + sel(p.diet, 'transicao') + '>Em transição</option></select></label>' +
+      '<label>Orçamento<select id="cpBudget"><option value="">Sem preferência</option><option value="economico"' + sel(p.budget, 'economico') + '>Econômico</option><option value="medio"' + sel(p.budget, 'medio') + '>Médio</option><option value="livre"' + sel(p.budget, 'livre') + '>Sem restrição</option></select></label>' +
+      '<label>Alergias ou restrições<input id="cpAllergy" maxlength="80" placeholder="Ex.: amendoim, glúten" value="' + esc(p.allergies || '') + '"></label>' +
+      '<div class="cprefs-row"><button class="cb-act" onclick="savePrefs()">Salvar</button><button class="cb-act ghost" onclick="togglePrefs()">Cancelar</button></div></div>';
+    document.getElementById('chatSugs').innerHTML = '';
+    return;
+  }
+  var lastBot = -1; chat.msgs.forEach(function(m, i) { if (m.role === 'assistant') lastBot = i; });
+  var html = '<div class="cb bot">Oi! Eu sou a Elo 🌿 Posso ajudar com receitas, substituições, dúvidas de rótulos e dicas para quem é vegano ou está começando. Você também pode enviar uma foto de rótulo (📷) que eu leio os ingredientes. Como posso ajudar?</div>';
+  html += chat.msgs.map(function(m, i) { return msgHTML(m, i, i === lastBot && !chat.busy); }).join('');
   if (chat.busy) html += '<div class="cb bot typing" aria-label="Elo está digitando"><i></i><i></i><i></i></div>';
   if (chat.err) html += '<div class="cb err">' + esc(chat.err) + '</div>';
   list.innerHTML = html; list.scrollTop = list.scrollHeight;
-  document.getElementById('chatSugs').innerHTML = chat.msgs.length ? '' : CHAT_SUGS.map(function(s) { return '<button type="button" onclick="askChat(this.textContent)">' + esc(s) + '</button>'; }).join('');
+  document.getElementById('chatSugs').innerHTML = chat.msgs.length ? '' : chatSugsNow().map(function(s) { return '<button type="button" onclick="askChat(this.textContent)">' + esc(s) + '</button>'; }).join('');
   document.getElementById('chatSend').disabled = chat.busy;
 }
+
+// efeito de digitação (só visual; respeita "reduzir movimento")
+function stopTyping() { if (chat.timer) { clearInterval(chat.timer); chat.timer = null; } chat.typing = -1; }
+function typeLast() {
+  var i = chat.msgs.length - 1, m = chat.msgs[i], reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!m || m.role !== 'assistant' || reduce) { renderChat(); return; }
+  var full = extractActions(m.content).text, n = 0, step = Math.max(3, Math.ceil(full.length / 80));
+  chat.typing = i; renderChat();
+  var el = document.getElementById('cb-' + i), list = document.getElementById('chatMsgs');
+  if (!el) { stopTyping(); renderChat(); return; }
+  chat.timer = setInterval(function() {
+    n += step;
+    if (n >= full.length) { stopTyping(); renderChat(); return; }
+    var part = full.slice(0, n); if ((part.match(/\*\*/g) || []).length % 2) part += '**';
+    el.innerHTML = fmtChat(part); list.scrollTop = list.scrollHeight;
+  }, 22);
+}
+
+// ----- ações nas respostas -----
+function copyChat(i) {
+  var m = chat.msgs[i]; if (!m) return;
+  if (navigator.clipboard) navigator.clipboard.writeText(extractActions(m.content).text).then(function() { toast('Resposta copiada'); }, function() { toast('Não foi possível copiar'); });
+}
+function rateChat(i, v) {
+  var m = chat.msgs[i], q = chat.msgs[i - 1]; if (!m) return;
+  if (!sb || !cloud.user) { toast('Entre na sua conta para avaliar as respostas.'); return; }
+  m.fb = v; renderChat();
+  sb.from('chat_feedback').insert({ rating: v === 'up' ? 1 : -1, question: q ? q.content.slice(0, 500) : '', answer: extractActions(m.content).text.slice(0, 1500) }).then(function(r) {
+    if (r.error) { console.error(r.error); m.fb = null; renderChat(); toast('Não foi possível enviar sua avaliação agora.'); }
+    else toast('Obrigada pelo retorno! 💚');
+  });
+}
+function useChatRecipe(i) {
+  var m = chat.msgs[i], r = m && parseRecipe(extractActions(m.content).text); if (!r) return;
+  closeChat(); startCreate('recipe');
+  var set = function(id, v) { var e = document.getElementById(id); if (e) e.value = v; };
+  set('recipeTitle', r.title); set('recipeTime', r.time); set('recipeIngredients', r.ingredients.join('\n')); set('recipeSteps', r.steps.join('\n'));
+  if (/sobremesa|bolo|doce|brownie|brigadeiro|pudim/i.test(r.title)) set('recipeCategory', 'sobremesa');
+  toast('Revise e publique sua receita ✍️');
+}
+function regenChat() {
+  if (chat.busy) return;
+  var last = chat.msgs.length - 1;
+  while (last >= 0 && chat.msgs[last].role === 'assistant') { chat.msgs.pop(); last--; }
+  var u = chat.msgs[chat.msgs.length - 1]; if (!u || u.role !== 'user') { renderChat(); return; }
+  askChat(u.content, u.img, true);
+}
+
+// ----- foto de rótulo (reduzida e enviada só quando você escolhe) -----
+function pickLabelPhoto() { document.getElementById('chatFile').click(); }
+function shrinkImage(file, max, cb) {
+  var rd = new FileReader();
+  rd.onload = function() {
+    var im = new Image();
+    im.onload = function() {
+      var s = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(im.width * s)); c.height = Math.max(1, Math.round(im.height * s));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      var q = 0.82, d = c.toDataURL('image/jpeg', q);
+      while (d.length > 1300000 && q > 0.4) { q -= 0.1; d = c.toDataURL('image/jpeg', q); }
+      cb(d.length > 1500000 ? null : d);
+    };
+    im.onerror = function() { cb(null); }; im.src = rd.result;
+  };
+  rd.onerror = function() { cb(null); }; rd.readAsDataURL(file);
+}
+function onLabelFile(e) {
+  var f = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  if (!/^image\//.test(f.type)) { toast('Escolha uma imagem.'); return; }
+  shrinkImage(f, 1280, function(d) { if (!d) { toast('Não foi possível ler essa imagem.'); return; } askChat('', d); });
+}
+
+// motivo técnico mostrado na resposta de reserva (ajuda a descobrir o que falta configurar)
+function chatReason(err) {
+  var st = err && err.status, d = err && err.detail;
+  if (st === 404) return 'Motivo: a função do chat não foi encontrada no servidor (erro 404). O arquivo api/chat.js precisa estar publicado dentro da pasta api.';
+  if (st === 500) return 'Motivo: ' + (d || 'o servidor não está configurado') + ' (erro 500). Falta a chave ANTHROPIC_API_KEY no Vercel ou o Redeploy.';
+  if (st === 502 || st === 504) return 'Motivo: ' + (d || 'a IA não respondeu') + ' (erro ' + st + '). Confira se a chave está correta e se a conta da Anthropic tem crédito.';
+  return 'A IA completa da Elo ainda não está ativada no servidor.';
+}
+
+// ----- enviar e receber -----
 function sendChat(e) {
   e.preventDefault();
   var i = document.getElementById('chatInput'), t = i.value.trim();
   if (!t) return;
   i.value = ''; askChat(t);
 }
-function askChat(text) {
+function askChat(text, img, regen) {
   text = (text || '').trim();
-  if (!text || chat.busy) return;
-  chat.msgs.push({ role: 'user', content: text.slice(0, 500) });
-  if (!sb || !cloud.user) {   // sem sessão: resposta básica, sem bloquear o chat
-    chat.msgs.push({ role: 'assistant', content: eloFallback(text) + '\n\n(Resposta automática básica. Entre na sua conta para usar a IA completa da Elo.)' });
-    chat.err = ''; renderChat(); return;
-  }
+  if ((!text && !img) || chat.busy) return;
+  stopTyping(); chat.prefsOpen = false;
+  if (!regen) chat.msgs.push({ role: 'user', content: (text || 'Analise os ingredientes deste rótulo.').slice(0, 500), img: img || null });
   chat.busy = true; chat.err = ''; renderChat();
+  var q = text || 'rótulo';
+  var finish = function() { chat.busy = false; saveChat(); typeLast(); };
+  var fallback = function(why) {
+    var base = img ? 'Para ler a foto de um rótulo eu preciso da IA completa, que ainda não está ativada. Enquanto isso: procure na embalagem leite, soro de leite, caseína, ovo, gelatina, mel e carmim (E120), que são de origem animal. Em dúvida, consulte o fabricante.' : eloFallback(q);
+    chat.msgs.push({ role: 'assistant', content: base + '\n\n(Resposta automática básica. ' + why + ')' }); finish();
+  };
+  if (!sb || !cloud.user) { fallback('Entre na sua conta para usar a IA completa da Elo.'); return; }
   sb.auth.getSession().then(function(r) {
     var s = r.data && r.data.session;
     if (!s) throw new Error('Sua sessão expirou. Saia e entre de novo.');
+    var lastUserImg = img || null;
     return fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.access_token },
-      body: JSON.stringify({ messages: chat.msgs.slice(-12).map(function(m) { return { role: m.role, content: m.content }; }) })
+      body: JSON.stringify({ messages: chat.msgs.slice(-12).map(function(m) { return { role: m.role, content: m.content }; }), context: chatContext(), prefs: getPrefs(), image: lastUserImg || undefined })
     });
   }).then(function(res) {
     return res.json().catch(function() { return {}; }).then(function(d) {
-      if (res.status === 404 || res.status === 500 || res.status === 502 || res.status === 504) { var fe = new Error('fallback'); fe.fallback = true; throw fe; }
+      if (res.status === 404 || res.status === 500 || res.status === 502 || res.status === 504) { var fe = new Error('fallback'); fe.fallback = true; fe.status = res.status; fe.detail = d.error || ''; throw fe; }
       if (!res.ok) throw new Error(d.error || 'Não foi possível responder agora.');
       return d;
     });
   }).then(function(d) {
-    chat.msgs.push({ role: 'assistant', content: d.reply });
+    chat.msgs.push({ role: 'assistant', content: d.reply }); finish();
   }).catch(function(err) {
-    if ((err && err.fallback) || (err && err.message === 'Failed to fetch')) {
-      chat.msgs.push({ role: 'assistant', content: eloFallback(text) + '\n\n(Resposta automática básica: a IA completa da Elo ainda não está ativada no servidor.)' });
-    } else chat.err = (err && err.message) ? err.message : 'Não foi possível responder agora.';
-  }).then(function() { chat.busy = false; renderChat(); });
+    if (err && err.fallback) fallback(chatReason(err));
+    else if (err && err.message === 'Failed to fetch') fallback('Sem conexão com o servidor. Confira a internet.');
+    else { chat.err = (err && err.message) ? err.message : 'Não foi possível responder agora.'; chat.busy = false; renderChat(); }
+  });
 }
 document.addEventListener('DOMContentLoaded', buildChat);
 
