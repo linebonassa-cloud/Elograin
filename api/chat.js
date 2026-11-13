@@ -2,7 +2,7 @@
 
 const SUPABASE_URL = 'https://lkbuejiqkjocmcdqcyxv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_ecUzPh2z2oBWsOQm6HIC8g_nDOFPnqL';
-const MODEL = 'gemini-3.8-flash'; // Modelo atual gratuito e rápido do Google
+const MODEL = 'gemini-3.8-flash'; // Modelo atualizado exigido pelo Google
 const LIMIT = 24;
 const WINDOW_MS = 10 * 60 * 1000;
 const hits = new Map();
@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
   if (recent.length >= LIMIT) return res.status(429).json({ error: 'Muitas mensagens seguidas. Espere alguns minutos.' });
   recent.push({ t: now }); hits.set('user_hit', recent);
 
-  // 4) Chamada para o Gemini 2.5 Flash
+  // 4) Chamada para o Gemini 3.8 Flash
   try {
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY.trim()}`;
     
