@@ -2,7 +2,7 @@
 
 const SUPABASE_URL = 'https://lkbuejiqkjocmcdqcyxv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_ecUzPh2z2oBWsOQm6HIC8g_nDOFPnqL';
-const MODEL = 'gemini-2.5-flash'; // Modelo atual gratuito e rápido do Google
+const MODEL = 'gemini-3.8-flash'; // Modelo atual gratuito e rápido do Google
 const LIMIT = 24;
 const WINDOW_MS = 10 * 60 * 1000;
 const hits = new Map();
