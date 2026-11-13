@@ -1599,12 +1599,12 @@ function onLabelFile(e) {
   shrinkImage(f, 1280, function(d) { if (!d) { toast('Não foi possível ler essa imagem.'); return; } askChat('', d); });
 }
 
-// motivo técnico mostrado na resposta de reserva (ajuda a descobrir o que falta configurar)
+// motivo técnico atualizado para Gemini
 function chatReason(err) {
   var st = err && err.status, d = err && err.detail;
   if (st === 404) return 'Motivo: a função do chat não foi encontrada no servidor (erro 404). O arquivo api/chat.js precisa estar publicado dentro da pasta api.';
-  if (st === 500) return 'Motivo: ' + (d || 'o servidor não está configurado') + ' (erro 500). Falta a chave ANTHROPIC_API_KEY no Vercel ou o Redeploy.';
-  if (st === 502 || st === 504) return 'Motivo: ' + (d || 'a IA não respondeu') + ' (erro ' + st + '). Confira se a chave está correta e se a conta da Anthropic tem crédito.';
+  if (st === 500) return 'Motivo: ' + (d || 'o servidor não está configurado') + ' (erro 500). Verifique se a chave GEMINI_API_KEY está configurada na Vercel e faça o Redeploy.';
+  if (st === 502 || st === 504) return 'Motivo: ' + (d || 'a IA não respondeu') + ' (erro ' + st + '). Confira se a chave do Gemini está correta.';
   return 'A IA completa da Elo ainda não está ativada no servidor.';
 }
 
