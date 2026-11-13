@@ -117,7 +117,7 @@ function loadState() {
       state = Object.assign({}, state, parsed);
     }
   } catch (e) {}
-  if (!localStorage.getItem('elograin_identity_v66')) { state.darkMode = true; localStorage.setItem('elograin_identity_v66', '1'); }
+  if (!localStorage.getItem('elograin_identity_v66')) { state.darkMode = true; localStorage.setItem('elograin_identity_v66', '1'); }   // nova identidade: abre no escuro uma vez
   if (state.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
 }
@@ -152,10 +152,12 @@ function toast(msg, actionLabel, action) {
   setTimeout(function() { el.remove(); }, actionLabel ? 5000 : 3000);
 }
 
+// Escapa HTML: texto digitado pelo usuário nunca pode virar código (evita XSS)
 function esc(s) { return String(s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 var TAG_LABEL = { dica: 'Dica', experiencia: 'Experiência', duvida: 'Dúvida' };
 function activeFeedTag() { var t = document.querySelector('#feedTags .tag.active'); return t ? t.dataset.tag : 'todos'; }
 
+// ===== SKELETON HELPERS =====
 function showSkeleton(view) {
   if (view === 'recipes') {
     var sk = document.getElementById('recipesSkeleton');
@@ -200,7 +202,7 @@ function hideSkeleton(view) {
 
 var loadedViews = {};
 function simulateLoading(view, callback, delay) {
-  if (loadedViews[view]) { callback(); return; }
+  if (loadedViews[view]) { callback(); return; }   // já carregou antes: mostra na hora, sem skeleton
   loadedViews[view] = true;
   delay = delay || 450;
   showSkeleton(view);
@@ -212,4 +214,42 @@ function simulateLoading(view, callback, delay) {
   }, delay);
 }
 
-var
+// ===== SWIPE TO DELETE LOGIC =====
+var swipeState = {
+  isDragging: false,
+  startX: 0,
+  currentX: 0,
+  trackWidth: 0,
+  handleWidth: 48,
+  maxDrag: 0,
+  threshold: 0.85
+};
+
+function openSwipeModal(postId) {
+  state.deleteTargetId = postId;
+  var post = state.posts.find(function(p) { return p.id === postId; });
+  var title = post ? (post.content.substring(0, 50) + '...') : 'este post';
+  document.getElementById('swipePostTitle').textContent = 'Voce esta excluindo: "' + title + '". Esta acao nao pode ser desfeita.';
+  document.getElementById('swipeOverlay').classList.add('active');
+  resetSwipe();
+}
+
+function closeSwipeModal() {
+  document.getElementById('swipeOverlay').classList.remove('active');
+  state.deleteTargetId = null;
+  resetSwipe();
+}
+
+function resetSwipe() {
+  swipeState.isDragging = false;
+  var handle = document.getElementById('swipeHandle');
+  var progress = document.getElementById('swipeProgress');
+  var label = document.getElementById('swipeLabel');
+  var success = document.getElementById('swipeSuccess');
+  handle.style.left = '4px';
+  handle.style.transform = 'translateY(-50%)';
+  handle.classList.remove('completed');
+  progress.style.width = '0%';
+  progress.classList.remove('complete');
+  label.classList.remove('hidden');
+  success.classList.remove('active
