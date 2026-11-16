@@ -48,33 +48,52 @@ export default async function handler(req, res) {
       }
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents: contents,
-          generationConfig: {
-            temperature: 0.7,
-          }
-        })
+    const models = ['gemini-3.8-flash', 'gemini-3.8-flash-lite', 'gemini-3.0-flash'];
+    let reply = null;
+    let lastError = null;
+
+    for (const model of models) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents: contents,
+            generationConfig: {
+              temperature: 0.7,
+            }
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (reply) break;
+      } else {
+        lastError = data?.error?.message || '';
+        console.warn(`Modelo ${model} indisponível:`, lastError);
+        // Se for erro de chave inválida, não adianta tentar os outros modelos
+        if (response.status === 400 || response.status === 403) break;
       }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Erro na API do Gemini:', data);
-      return res.status(500).json({ error: data?.error?.message || 'Erro ao processar a resposta da IA.' });
     }
 
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Não consegui formular uma resposta agora.';
+    if (!reply) {
+      const isHighDemand = /high demand|quota|429|503|overloaded/i.test(lastError || '');
+      return res.status(503).json({
+        error: isHighDemand
+          ? 'A Elo está recebendo muitas perguntas agora. Tente enviar novamente em alguns segundos! 🌿'
+          : (lastError || 'Não consegui formular uma resposta agora.')
+      });
+    }
+
     return res.status(200).json({ reply });
 
   } catch (err) {
     console.error('Erro na API do Gemini:', err);
-    return res.status(500).json({ error: err.message || 'Erro ao processar a resposta da IA.' });
+    return res.status(500).json({ error: 'Erro ao processar a resposta da IA.' });
   }
 }
