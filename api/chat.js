@@ -1,5 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -11,10 +9,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { messages, context, prefs, image } = req.body;
-    const ai = new GoogleGenAI({ apiKey: apiKey });
+    const { messages, context, prefs, image } = req.body || {};
 
-    let systemInstruction = "Você é a Elo, a assistente virtual vegana do aplicativo Elograin. Responda de forma acolhedora, prestativa e objetiva, focando em culinária vegana, substituições de ingredientes, leitura de rótulos e apoio à comunidade. Nunca invente endereços de restaurantes ou receitas que não estejam no contexto fornecido.";
+    let systemInstruction = "Você é a Elo, a assistente virtual vegana do aplicativo Elograin. Responda de forma acolhedora, prestativa e objetiva, focando em culinária vegana, substituições de ingredientes, leitura de rótulos e apoio à comunidade. Você pode ensinar receitas veganas normalmente, mas nunca invente endereços de restaurantes ou estabelecimentos reais que não estejam no contexto fornecido.";
     
     if (prefs) {
       if (prefs.diet) systemInstruction += " Preferência alimentar do usuário: " + prefs.diet + ".";
@@ -23,7 +20,7 @@ export default async function handler(req, res) {
     }
 
     if (context) {
-      systemInstruction += " Dados atuais do Elograin (use apenas estes se precisar citar lugares ou receitas reais):\n" + JSON.stringify(context);
+      systemInstruction += " Dados atuais do Elograin (use apenas estes se precisar citar lugares ou receitas cadastradas no app):\n" + JSON.stringify(context);
     }
 
     let contents = [];
@@ -51,16 +48,30 @@ export default async function handler(req, res) {
       }
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.7,
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents: contents,
+          generationConfig: {
+            temperature: 0.7,
+          }
+        })
       }
-    });
+    );
 
-    return res.status(200).json({ reply: response.text });
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Erro na API do Gemini:', data);
+      return res.status(500).json({ error: data?.error?.message || 'Erro ao processar a resposta da IA.' });
+    }
+
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Não consegui formular uma resposta agora.';
+    return res.status(200).json({ reply });
 
   } catch (err) {
     console.error('Erro na API do Gemini:', err);
