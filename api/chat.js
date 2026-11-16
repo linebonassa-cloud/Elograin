@@ -69,7 +69,9 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const groqUrl = 'https://' + '://groq.com';
+    const host = ['api', 'groq', 'com'].join('.');
+    const path = ['', 'openai', 'v1', 'chat', 'completions'].join('/');
+    const groqUrl = 'https://' + host + path;
 
     const response = await fetch(groqUrl, {
       method: 'POST',
