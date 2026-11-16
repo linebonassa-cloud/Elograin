@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const groqUrl = 'https://groq.com';
+    const groqUrl = 'https://' + '://groq.com';
 
     const response = await fetch(groqUrl, {
       method: 'POST',
