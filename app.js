@@ -1415,7 +1415,7 @@ function askChat(text) {
   sb.auth.getSession().then(function(r) {
     var s = r.data && r.data.session;
     if (!s) throw new Error('Sua sessão expirou. Saia e entre de novo.');
-    return fetch('/api/chat', {
+    return fetch('https://elograin-ashen.vercel.app/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.access_token },
       body: JSON.stringify({ messages: chat.msgs.slice(-12).map(function(m) { return { role: m.role, content: m.content }; }) })
