@@ -1,10 +1,8 @@
 module.exports = async function handler(req, res) {
-  // Libera o acesso de qualquer origem (CORS)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  // Responde à verificação preflight do navegador antes do POST
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -19,10 +17,14 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { messages, context, prefs, image } = req.body || {};
+    const body = typeof req.body === 'string' && req.body.trim() !== ''
+      ? JSON.parse(req.body)
+      : (req.body || {});
+
+    const { messages, context, prefs, image } = body;
 
     let systemInstruction = "Você é a Elo, a assistente virtual vegana do aplicativo Elograin. Responda sempre em português do Brasil, de forma acolhedora, prestativa e objetiva, focando em culinária vegana, substituições de ingredientes, leitura de rótulos e apoio à comunidade. Você pode ensinar receitas veganas normalmente, mas nunca invente endereços de restaurantes ou estabelecimentos reais que não estejam no contexto fornecido.";
-    
+
     if (prefs) {
       if (prefs.diet) systemInstruction += " Preferência alimentar do usuário: " + prefs.diet + ".";
       if (prefs.budget) systemInstruction += " Orçamento: " + prefs.budget + ".";
@@ -71,7 +73,7 @@ module.exports = async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': 'Bearer ' + apiKey.trim()
       },
       body: JSON.stringify({
         model: model,
@@ -81,20 +83,37 @@ module.exports = async function handler(req, res) {
       })
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    let data = {};
 
-    if (!response.ok) {
-      console.error('Erro na API da Groq:', data);
-      return res.status(response.status).json({
-        error: data?.error?.message || 'Erro ao processar a resposta da IA.'
-      });
+    if (rawText) {
+      try {
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        console.error('Resposta não-JSON da Groq:', response.status, rawText);
+        return res.status(502).json({
+          error: 'Resposta inesperada da Groq (HTTP ' + response.status + ')'
+        });
+      }
     }
 
-    const reply = data?.choices?.[0]?.message?.content || 'Não consegui formular uma resposta agora.';
+    if (!response.ok) {
+      console.error('Erro na API da Groq:', response.status, data);
+      const errMsg = (data && data.error && data.error.message)
+        ? data.error.message
+        : 'Erro HTTP ' + response.status + ' na Groq.';
+      return res.status(response.status).json({ error: errMsg });
+    }
+
+    const firstChoice = data && data.choices && data.choices.length > 0 ? data.choices[0] : null;
+    const reply = (firstChoice && firstChoice.message && firstChoice.message.content)
+      ? firstChoice.message.content
+      : 'Não consegui formular uma resposta agora.';
+
     return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error('Erro na API da Groq:', err);
-    return res.status(500).json({ error: 'Erro ao processar a resposta da IA.' });
+    console.error('Erro interno no /api/chat:', err);
+    return res.status(500).json({ error: 'Erro interno: ' + err.message });
   }
 };
