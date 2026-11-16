@@ -67,7 +67,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('https://groq.com', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
