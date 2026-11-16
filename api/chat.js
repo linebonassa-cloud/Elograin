@@ -69,7 +69,9 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const response = await fetch('https://groq.com', {
+    const groqUrl = 'https://groq.com';
+
+    const response = await fetch(groqUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -90,7 +92,6 @@ module.exports = async function handler(req, res) {
       try {
         data = JSON.parse(rawText);
       } catch (parseErr) {
-        console.error('Resposta não-JSON da Groq:', response.status, rawText);
         return res.status(502).json({
           error: 'Resposta inesperada da Groq (HTTP ' + response.status + ')'
         });
@@ -98,14 +99,13 @@ module.exports = async function handler(req, res) {
     }
 
     if (!response.ok) {
-      console.error('Erro na API da Groq:', response.status, data);
       const errMsg = (data && data.error && data.error.message)
         ? data.error.message
         : 'Erro HTTP ' + response.status + ' na Groq.';
       return res.status(response.status).json({ error: errMsg });
     }
 
-    const firstChoice = data && data.choices && data.choices.length > 0 ? data.choices[0] : null;
+    const firstChoice = Array.isArray(data.choices) ? data.choices.at(0) : null;
     const reply = (firstChoice && firstChoice.message && firstChoice.message.content)
       ? firstChoice.message.content
       : 'Não consegui formular uma resposta agora.';
@@ -113,7 +113,6 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error('Erro interno no /api/chat:', err);
     return res.status(500).json({ error: 'Erro interno: ' + err.message });
   }
 };
