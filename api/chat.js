@@ -50,7 +50,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    let model = 'llama-3.3-70b-versatile';
+    let model = 'openai/gpt-oss-120b';
 
     if (image) {
       model = 'meta-llama/llama-4-scout-17b-16e-instruct';
